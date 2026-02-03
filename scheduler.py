@@ -168,15 +168,16 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
         grid = [[None] * NUM_ROOMS for _ in range(NUM_BLOCKS)]
         failed_name = None
 
-        # Place each WG in “randomised first‐fit” fashion
+        # Place each WG in "randomised first‐fit" fashion
         for (name, length) in a_list:
             # Build all candidate (start_block, room) pairs
-            candidates = [
-                (start, room)
-                for start in range(0, NUM_BLOCKS - length + 1)
-                for room in range(NUM_ROOMS)
-            ]
-            random.shuffle(candidates)
+            # Prefer earlier sessions, but randomize room order
+            candidates = []
+            for start in range(0, NUM_BLOCKS - length + 1):
+                rooms = list(range(NUM_ROOMS))
+                random.shuffle(rooms)  # Randomize room order within each session
+                for room in rooms:
+                    candidates.append((start, room))
             placed = False
             for (blk, rms) in candidates:
                 # Check if [blk..blk+length-1] in column=room is free
@@ -210,9 +211,12 @@ def fill_bofs(grid, bofs, verbose=False):
     Returns (new_grid, leftover_bofs_list).  
       If leftover_bofs_list is non‐empty, there weren’t enough empty cells.
     """
-    # Collect all empty coordinates
-    empties = [(r, c) for r in range(NUM_BLOCKS) for c in range(NUM_ROOMS) if grid[r][c] is None]
-    random.shuffle(empties)
+    # Collect all empty coordinates, prioritizing earlier sessions
+    empties = []
+    for r in range(NUM_BLOCKS):
+        rooms = [(r, c) for c in range(NUM_ROOMS) if grid[r][c] is None]
+        random.shuffle(rooms)  # Randomize room order within each session
+        empties.extend(rooms)
 
     new_grid = [row[:] for row in grid]
     leftovers = []
