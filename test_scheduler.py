@@ -56,26 +56,29 @@ class TestCSVReaders(unittest.TestCase):
             read_wgroups(wg_path, name_col=0, length_col=1)
     
     def test_read_bofs_valid(self):
-        """Test reading valid BOF CSV with column AG"""
+        """Test reading valid BOF CSV with name and length columns"""
         bof_path = os.path.join(self.test_dir, "test_bof.csv")
         with open(bof_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            # Create header with 33 columns
-            header = [f"Col{i}" for i in range(33)]
-            header[32] = "BOF Title"
+            # Create header with 12 columns (name=8, length=11)
+            header = [f"Col{i}" for i in range(12)]
+            header[8] = "BOF Title"
+            header[11] = "Session Count"
             writer.writerow(header)
-            # Add data rows with BOF names in column 33 (index 32)
-            row1 = [""] * 33
-            row1[32] = "BOF 1"
+            # Add data rows with BOF names and lengths
+            row1 = [""] * 12
+            row1[8] = "BOF 1"
+            row1[11] = "1"
             writer.writerow(row1)
-            row2 = [""] * 33
-            row2[32] = "BOF 2"
+            row2 = [""] * 12
+            row2[8] = "BOF 2"
+            row2[11] = "2"
             writer.writerow(row2)
         
-        bofs = read_bofs(bof_path, name_col=32)
+        bofs = read_bofs(bof_path, name_col=8, length_col=11)
         self.assertEqual(len(bofs), 2)
         self.assertEqual(bofs[0], ("BOF 1", 1))
-        self.assertEqual(bofs[1], ("BOF 2", 1))
+        self.assertEqual(bofs[1], ("BOF 2", 2))
     
     def test_read_schedule(self):
         """Test reading existing schedule CSV"""
@@ -128,14 +131,14 @@ class TestSchedulingAlgorithms(unittest.TestCase):
         """Test BOF filling into empty grid"""
         # Create empty grid using current config
         grid = [[None] * NUM_ROOMS for _ in range(NUM_BLOCKS)]
-        bofs = [("BOF 1", 1), ("BOF 2", 1), ("BOF 3", 1)]
+        bofs = [("BOF 1", 1), ("BOF 2", 2), ("BOF 3", 1)]
         
         new_grid, leftovers = fill_bofs(grid, bofs, verbose=False)
         
         self.assertEqual(len(leftovers), 0)
-        # Count BOFs placed
+        # Count BOF slots placed (1+2+1 = 4)
         placed = sum(1 for row in new_grid for cell in row if cell is not None)
-        self.assertEqual(placed, 3)
+        self.assertEqual(placed, 4)
     
     def test_fill_bofs_overflow(self):
         """Test that too many BOFs leaves leftovers"""
@@ -215,15 +218,16 @@ class TestEndToEnd(unittest.TestCase):
         bof_path = os.path.join(self.test_dir, "bof.csv")
         with open(bof_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            header = [f"Col{i}" for i in range(33)]
+            header = [f"Col{i}" for i in range(12)]
             writer.writerow(header)
-            row1 = [""] * 33
-            row1[32] = "BOF Gamma"
+            row1 = [""] * 12
+            row1[8] = "BOF Gamma"
+            row1[11] = "1"
             writer.writerow(row1)
         
         # Run scheduling
         wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
-        bofs = read_bofs(bof_path, name_col=32)
+        bofs = read_bofs(bof_path, name_col=8, length_col=11)
         
         grid, failed, empty_rows = greedy_place_wgroups(wgroups, max_tries=100)
         self.assertIsNone(failed)

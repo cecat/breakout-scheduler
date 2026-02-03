@@ -97,8 +97,8 @@ def load_config(config_path="config.yaml"):
     # Validate required keys
     if 'name_column' not in cfg['wg'] or 'length_column' not in cfg['wg']:
         sys.exit("✖  Config 'wg' section must have 'name_column' and 'length_column'.")
-    if 'name_column' not in cfg['bof']:
-        sys.exit("✖  Config 'bof' section must have 'name_column'.")
+    if 'name_column' not in cfg['bof'] or 'length_column' not in cfg['bof']:
+        sys.exit("✖  Config 'bof' section must have 'name_column' and 'length_column'.")
 
     return cfg
 
@@ -134,11 +134,11 @@ def read_wgroups(path, name_col, length_col):
     return wgs
 
 
-def read_bofs(path, name_col):
+def read_bofs(path, name_col, length_col):
     """
-    Read “BOFs” CSV using the configured name column index.
+    Read "BOFs" CSV using the configured name and length column indices.
     For each row, take the first line of the target cell as the BOF name.
-    Returns: [ (bof_name:str, 1), … ]  — all length=1
+    Returns: [ (bof_name:str, length:int), … ]
     """
     bofs = []
     with open(path, newline="", encoding="utf-8-sig") as f:
@@ -146,17 +146,25 @@ def read_bofs(path, name_col):
         header = next(rdr, None)
         if header is None:
             sys.exit("✖  BOFs file is empty or malformed.")
-        if len(header) <= name_col:
-            sys.exit(f"✖  BOFs file has {len(header)} columns, but config requires column {name_col}.")
+        max_col = max(name_col, length_col)
+        if len(header) <= max_col:
+            sys.exit(f"✖  BOFs file has {len(header)} columns, but config requires column {max_col}.")
         for row_num, row in enumerate(rdr, start=2):
-            if len(row) <= name_col:
+            if len(row) <= max_col:
                 continue
             raw_cell = row[name_col].strip()
             if not raw_cell:
                 continue  # skip blank cells
             name = raw_cell.split('\n', 1)[0].strip()
-            if name:
-                bofs.append((name, 1))
+            if not name:
+                continue
+            try:
+                length = int(row[length_col].strip())
+            except ValueError:
+                sys.exit(f"✖  Unable to parse length for '{name}' (row {row_num}). Must be an integer.")
+            if length < 1 or length > 3:
+                sys.exit(f"✖  BOF '{name}' asked for {length} blocks (only 1–3 allowed).")
+            bofs.append((name, length))
     return bofs
 
 
@@ -257,28 +265,42 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
 
 def fill_bofs(grid, bofs, verbose=False):
     """
-    Given a partially filled 5×8 grid (with None in empty cells) and a list of BOFs
-    [(name,1),…], attempt to fill each BOF into a single free cell.
-    Returns (new_grid, leftover_bofs_list).  
-      If leftover_bofs_list is non‐empty, there weren’t enough empty cells.
+    Given a partially filled grid and a list of BOFs [(name, length), …],
+    attempt to place each BOF (which can now be 1-3 sessions) using same
+    algorithm as WGs.
+    Returns (new_grid, leftover_bofs_list).
+      If leftover_bofs_list is non‐empty, some BOFs couldn't be placed.
     """
-    # Collect all empty coordinates, prioritizing earlier sessions
-    empties = []
-    for r in range(NUM_BLOCKS):
-        rooms = [(r, c) for c in range(NUM_ROOMS) if grid[r][c] is None]
-        random.shuffle(rooms)  # Randomize room order within each session
-        empties.extend(rooms)
-
+    # Copy the grid
     new_grid = [row[:] for row in grid]
     leftovers = []
-
-    for idx, (name, _) in enumerate(bofs):
-        if idx < len(empties):
-            r, c = empties[idx]
-            new_grid[r][c] = name
-        else:
+    
+    # Shuffle BOFs and sort by descending length (same strategy as WGs)
+    bof_list = random.sample(bofs, len(bofs))
+    bof_list.sort(key=lambda x: -x[1])
+    
+    for (name, length) in bof_list:
+        # Build all candidate (start_block, room) pairs
+        # Prefer earlier sessions, randomize room order
+        candidates = []
+        for start in range(0, NUM_BLOCKS - length + 1):
+            rooms = list(range(NUM_ROOMS))
+            random.shuffle(rooms)  # Randomize room order within each session
+            for room in rooms:
+                candidates.append((start, room))
+        
+        placed = False
+        for (blk, rms) in candidates:
+            # Check if [blk..blk+length-1] in column=room is free
+            if all(new_grid[blk + offset][rms] is None for offset in range(length)):
+                for offset in range(length):
+                    new_grid[blk + offset][rms] = name
+                placed = True
+                break
+        
+        if not placed:
             leftovers.append(name)
-
+    
     return new_grid, leftovers
 
 
@@ -339,7 +361,7 @@ if __name__ == "__main__":
     if has_b:
         if not os.path.isfile(args.bofs):
             sys.exit(f"✖  BOFs file not found: {args.bofs!r}")
-        bofs = read_bofs(args.bofs, cfg['bof']['name_column'])
+        bofs = read_bofs(args.bofs, cfg['bof']['name_column'], cfg['bof']['length_column'])
         if args.verbose:
             print(f"→ Loaded {len(bofs)} BOF request(s) (each length=1).")
 
