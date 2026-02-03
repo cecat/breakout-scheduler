@@ -13,7 +13,7 @@ import tempfile
 import sys
 from scheduler import (
     read_wgroups, read_bofs, read_schedule, write_schedule,
-    greedy_place_wgroups, fill_bofs, NUM_BLOCKS
+    greedy_place_wgroups, fill_bofs, NUM_BLOCKS, NUM_ROOMS
 )
 
 
@@ -82,16 +82,21 @@ class TestCSVReaders(unittest.TestCase):
         sched_path = os.path.join(self.test_dir, "test_sched.csv")
         with open(sched_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["Room 1", "Room 2", "Room 3", "Room 4", "Room 5", "Room 6", "Room 7", "Room 8"])
-            writer.writerow(["WG A", "", "WG B", "", "", "", "", ""])
-            writer.writerow(["WG A", "", "", "", "", "", "", ""])
-            writer.writerow(["", "", "", "", "", "", "", ""])
-            writer.writerow(["", "", "", "", "", "", "", ""])
-            writer.writerow(["", "", "", "", "", "", "", ""])
+            # Use actual NUM_ROOMS from config
+            writer.writerow([f"Room {i+1}" for i in range(NUM_ROOMS)])
+            # Create NUM_BLOCKS rows
+            for block in range(NUM_BLOCKS):
+                row = [""] * NUM_ROOMS
+                if block == 0:  # First block only
+                    row[0] = "WG A"
+                    row[2] = "WG B"
+                elif block == 1:  # Second block
+                    row[0] = "WG A"
+                writer.writerow(row)
         
         grid = read_schedule(sched_path)
-        self.assertEqual(len(grid), 5)  # 5 blocks
-        self.assertEqual(len(grid[0]), 8)  # 8 rooms
+        self.assertEqual(len(grid), NUM_BLOCKS)
+        self.assertEqual(len(grid[0]), NUM_ROOMS)
         self.assertEqual(grid[0][0], "WG A")
         self.assertEqual(grid[0][2], "WG B")
         self.assertIsNone(grid[0][1])
@@ -113,15 +118,16 @@ class TestSchedulingAlgorithms(unittest.TestCase):
     
     def test_greedy_place_wgroups_capacity_exceeded(self):
         """Test that exceeding capacity causes exit"""
-        # Create too many WGs (more than 5*8=40 blocks)
-        wgroups = [("WG", 3) for _ in range(20)]  # 60 blocks > 40 capacity
+        # Create too many WGs (more than NUM_BLOCKS * NUM_ROOMS capacity)
+        capacity = NUM_BLOCKS * NUM_ROOMS
+        wgroups = [("WG", 3) for _ in range((capacity // 3) + 5)]  # Exceed capacity
         with self.assertRaises(SystemExit):
             greedy_place_wgroups(wgroups, max_tries=10, verbose=False)
     
     def test_fill_bofs_simple(self):
         """Test BOF filling into empty grid"""
-        # Create empty grid
-        grid = [[None] * 8 for _ in range(NUM_BLOCKS)]
+        # Create empty grid using current config
+        grid = [[None] * NUM_ROOMS for _ in range(NUM_BLOCKS)]
         bofs = [("BOF 1", 1), ("BOF 2", 1), ("BOF 3", 1)]
         
         new_grid, leftovers = fill_bofs(grid, bofs, verbose=False)
@@ -133,8 +139,8 @@ class TestSchedulingAlgorithms(unittest.TestCase):
     
     def test_fill_bofs_overflow(self):
         """Test that too many BOFs leaves leftovers"""
-        # Create full grid
-        grid = [["WG"] * 8 for _ in range(NUM_BLOCKS)]
+        # Create full grid using current config
+        grid = [["WG"] * NUM_ROOMS for _ in range(NUM_BLOCKS)]
         bofs = [("BOF 1", 1), ("BOF 2", 1)]
         
         new_grid, leftovers = fill_bofs(grid, bofs, verbose=False)
@@ -156,13 +162,13 @@ class TestScheduleIO(unittest.TestCase):
     
     def test_write_schedule(self):
         """Test writing schedule to CSV"""
-        grid = [
-            ["WG A", "WG B", None, None, None, None, None, None],
-            ["WG A", None, None, None, None, None, None, None],
-            [None, None, None, None, None, None, None, None],
-            [None, None, None, None, None, None, None, None],
-            [None, None, None, None, None, None, None, None],
-        ]
+        # Create grid using current config
+        grid = [[None] * NUM_ROOMS for _ in range(NUM_BLOCKS)]
+        # Add some test data
+        grid[0][0] = "WG A"
+        grid[0][1] = "WG B"
+        if NUM_BLOCKS > 1:
+            grid[1][0] = "WG A"
         
         out_path = os.path.join(self.test_dir, "output.csv")
         write_schedule(grid, out_path)
@@ -174,11 +180,11 @@ class TestScheduleIO(unittest.TestCase):
         with open(out_path, 'r', newline='', encoding='utf-8') as f:
             reader = csv.reader(f)
             header = next(reader)
-            self.assertEqual(len(header), 8)
+            self.assertEqual(len(header), NUM_ROOMS)
             self.assertTrue(header[0].startswith("Room"))
             
             rows = list(reader)
-            self.assertEqual(len(rows), 5)
+            self.assertEqual(len(rows), NUM_BLOCKS)
             self.assertEqual(rows[0][0], "WG A")
             self.assertEqual(rows[0][1], "WG B")
             self.assertEqual(rows[0][2], "")  # Empty cells become ""
