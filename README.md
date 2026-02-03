@@ -38,6 +38,23 @@ python scheduler.py --help
 - **BOF.csv**: BOFs input data (reads from column AG/33rd column)
 - **schedule.csv**: Output 5×8 grid with Room 1-8 headers and Block 1-5 rows
 
+## Testing
+
+Run the test suite:
+
+```bash
+python3 test_scheduler.py
+
+# Or with verbose output
+python3 test_scheduler.py -v
+```
+
+The test suite includes:
+- CSV input validation tests
+- Scheduling algorithm tests
+- End-to-end integration tests
+- Error handling tests
+
 ## Common Commands
 
 ```bash

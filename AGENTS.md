@@ -88,9 +88,23 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 10
 - Warnings printed with ⚠ prefix (non-fatal):
   - Empty time blocks after scheduling
 
+## Testing
+
+```bash
+# Run test suite
+python3 test_scheduler.py -v
+```
+
+Test coverage includes:
+- CSV parsing (WG.csv, BOF.csv, schedule.csv)
+- WG placement algorithm with capacity checks
+- BOF filling with overflow handling
+- End-to-end workflows
+- Error conditions (invalid lengths, capacity exceeded)
+
 ## Development Notes
 
-- No test suite exists; validate manually by inspecting output schedule.csv
 - CSV encoding: UTF-8 with BOM support (`encoding="utf-8-sig"`)
 - All placement uses Python's `random` module for non-deterministic behavior
 - Exit codes: 0 for success, 1 for errors
+- CI/CD: GitHub Actions runs tests on Python 3.8-3.12 on every push
