@@ -58,35 +58,86 @@ CAPACITY = NUM_BLOCKS * NUM_ROOMS
 DEFAULT_MAX_TRIES = 5_000
 
 
-# ──────────────────────── I/O Helpers ────────────────────────
-def read_wgroups(path):
+# ──────────────────────── Configuration ────────────────────────
+
+def load_config(config_path="config.yaml"):
     """
-    Read “Working Groups” CSV. Expect exactly these two headers:
-      “Name of Group”  and  “Quantity of Sessions Needed”
+    Load simple YAML-like configuration with column indices (0-based).
+    Supports keys:
+      wg: { name_column: int, length_column: int }
+      bof: { name_column: int }
+    """
+    if not os.path.isfile(config_path):
+        sys.exit(f"✖  Config file not found: {config_path!r}")
+
+    # Minimal parser for our simple YAML structure (no external dependencies)
+    cfg = {"wg": {}, "bof": {}}
+    section = None
+    with open(config_path, "r", encoding="utf-8") as f:
+        for raw in f:
+            # Strip comments and trailing whitespace
+            line = raw.split('#', 1)[0].rstrip()
+            if not line:
+                continue
+            # Section headers (e.g., wg:, bof:)
+            if not line.startswith(' ') and line.endswith(':'):
+                key = line[:-1].strip()
+                section = key if key in ("wg", "bof") else None
+                continue
+            # Key: value within a section (2-space indent)
+            if section and line.startswith('  ') and ':' in line:
+                k, v = line.strip().split(':', 1)
+                k = k.strip()
+                v = v.strip().strip('"\'')
+                try:
+                    cfg[section][k] = int(v)
+                except ValueError:
+                    sys.exit(f"✖  Config value for {section}.{k} must be an integer (got {v!r}).")
+
+    # Validate required keys
+    if 'name_column' not in cfg['wg'] or 'length_column' not in cfg['wg']:
+        sys.exit("✖  Config 'wg' section must have 'name_column' and 'length_column'.")
+    if 'name_column' not in cfg['bof']:
+        sys.exit("✖  Config 'bof' section must have 'name_column'.")
+
+    return cfg
+
+# ──────────────────────── I/O Helpers ────────────────────────
+def read_wgroups(path, name_col, length_col):
+    """
+    Read “Working Groups” CSV using column indices.
     Each length must be in {1,2,3}.
     Returns:  [ (name:str, length:int), … ]
     """
     wgs = []
     with open(path, newline="", encoding="utf-8-sig") as f:
-        rdr = csv.DictReader(f)
-        for row in rdr:
-            name = row.get("Name of Group", "").strip()
+        rdr = csv.reader(f)
+        header = next(rdr, None)
+        if header is None:
+            sys.exit("✖  WGs file is empty or malformed.")
+        max_col = max(name_col, length_col)
+        if len(header) <= max_col:
+            sys.exit(f"✖  WGs file has {len(header)} columns, but config requires column {max_col}.")
+        for row_num, row in enumerate(rdr, start=2):
+            if len(row) <= max_col:
+                continue  # Skip rows with insufficient columns
+            name = row[name_col].strip()
             if not name:
-                sys.exit("✖  Found a blank “Name of Group” in WGs file.")
+                continue  # Skip blank names
             try:
-                length = int(row.get("Quantity of Sessions Needed", "").strip())
+                length = int(row[length_col].strip())
             except ValueError:
-                sys.exit(f"✖  Unable to parse length for “{name}”. Must be an integer.")
+                sys.exit(f"✖  Unable to parse length for “{name}” (row {row_num}). Must be an integer.")
             if length < 1 or length > 3:
                 sys.exit(f"✖  WG “{name}” asked for {length} blocks (only 1–3 allowed).")
             wgs.append((name, length))
     return wgs
 
 
-def read_bofs(path):
+def read_bofs(path, name_col):
     """
-    Read “BOFs” CSV. We ignore all columns except column AG (33rd column).
-    For each row, take the first line (split on '\\n') of the AG‐cell as the BOF name.
+    Read “BOFs” CSV using the configured name column index.
+    For each row, take the first line of the target cell as the BOF name.
     Returns: [ (bof_name:str, 1), … ]  — all length=1
     """
     bofs = []
@@ -95,15 +146,15 @@ def read_bofs(path):
         header = next(rdr, None)
         if header is None:
             sys.exit("✖  BOFs file is empty or malformed.")
+        if len(header) <= name_col:
+            sys.exit(f"✖  BOFs file has {len(header)} columns, but config requires column {name_col}.")
         for row_num, row in enumerate(rdr, start=2):
-            if len(row) < 33:
-                # Fewer than 33 columns means no AG column
+            if len(row) <= name_col:
                 continue
-            raw_cell = row[32].strip()  # zero‐based index 32 = column AG
+            raw_cell = row[name_col].strip()
             if not raw_cell:
-                continue  # skip blank AG cells
-            name = raw_cell.strip()
-
+                continue  # skip blank cells
+            name = raw_cell.split('\n', 1)[0].strip()
             if name:
                 bofs.append((name, 1))
     return bofs
@@ -238,10 +289,12 @@ if __name__ == "__main__":
                     "into a 5×8 grid."
     )
     parser.add_argument("-w", "--wgroups", help="CSV of Working Groups (Name, Quantity)")
-    parser.add_argument("-b", "--bofs", help="CSV of BOFs (we read column AG).")
+    parser.add_argument("-b", "--bofs", help="CSV of BOFs (name column index from config).")
     parser.add_argument("-s", "--schedule", help="Schedule CSV to read (for BOFs) or write.")
     parser.add_argument("--max-tries", type=int, default=DEFAULT_MAX_TRIES,
                         help=f"Max random attempts for placing WGs (default {DEFAULT_MAX_TRIES})")
+    parser.add_argument("-c", "--config", default="config.yaml",
+                        help="Path to configuration YAML with column indices (default: config.yaml)")
     parser.add_argument("-r", "--rooms", type=int, default=NUM_ROOMS,
                         help=f"Number of rooms (default {NUM_ROOMS})")
     parser.add_argument("-p", "--permutations", type=int, default=1,
@@ -262,6 +315,11 @@ if __name__ == "__main__":
     has_b = bool(args.bofs)
     has_s = bool(args.schedule)
 
+    # Load configuration (only if needed)
+    cfg = None
+    if has_w or has_b:
+        cfg = load_config(args.config)
+
     # “Only -b” is not allowed
     if has_b and not (has_s or has_w):
         sys.exit("✖  Error: “-b/--bofs” requires either “-s/--schedule” (existing file) "
@@ -272,7 +330,7 @@ if __name__ == "__main__":
     if has_w:
         if not os.path.isfile(args.wgroups):
             sys.exit(f"✖  WG file not found: {args.wgroups!r}")
-        wgroups = read_wgroups(args.wgroups)
+        wgroups = read_wgroups(args.wgroups, cfg['wg']['name_column'], cfg['wg']['length_column'])
         if args.verbose:
             print(f"→ Loaded {len(wgroups)} Working Groups.")
 
@@ -281,7 +339,7 @@ if __name__ == "__main__":
     if has_b:
         if not os.path.isfile(args.bofs):
             sys.exit(f"✖  BOFs file not found: {args.bofs!r}")
-        bofs = read_bofs(args.bofs)
+        bofs = read_bofs(args.bofs, cfg['bof']['name_column'])
         if args.verbose:
             print(f"→ Loaded {len(bofs)} BOF request(s) (each length=1).")
 

@@ -38,10 +38,11 @@ python scheduler.py --help
 ## Key Files
 
 - **scheduler.py**: Main scheduling engine with two-phase algorithm (WGs + BOFs)
-- **stage1.py**: Simplified single-phase scheduler (WGs only)
-- **WG.csv**: Working Groups input data with columns "Name of Group" and "Quantity of Sessions Needed"
-- **BOF.csv**: BOFs input data (reads from column AG/33rd column)
+- **config.yaml**: Configuration file specifying CSV column indices (0-based)
 - **schedule.csv**: Output 5×8 grid with Room 1-8 headers and Block 1-5 rows
+
+Input CSV files are expected from several Google Forms. Column mappings are configured
+in `config.yaml` using 0-based indices.
 
 ## Testing
 
@@ -60,13 +61,31 @@ The test suite includes:
 - End-to-end integration tests
 - Error handling tests
 
+## Configuration
+
+The scheduler uses `config.yaml` to specify which columns to read from your CSV files. All column indices are 0-based (first column = 0).
+
+```yaml
+# Working Groups CSV configuration
+wg:
+  name_column: 0      # Column with group name
+  length_column: 17   # Column with session count (1-3)
+
+# Birds of a Feather CSV configuration
+bof:
+  name_column: 32     # Column with BOF name
+```
+
+To use a different configuration file, use the `-c/--config` option.
+
 ## Command Line Options
 
 ### scheduler.py
 
-- `-w, --wgroups FILE`: CSV file containing Working Groups (required headers: "Name of Group", "Quantity of Sessions Needed")
-- `-b, --bofs FILE`: CSV file containing BOFs (reads from column AG/33rd column)
+- `-w, --wgroups FILE`: CSV file containing Working Groups
+- `-b, --bofs FILE`: CSV file containing BOFs
 - `-s, --schedule FILE`: Schedule CSV file to read (for BOF-only mode) or write
+- `-c, --config FILE`: Configuration file with column indices (default: config.yaml)
 - `-r, --rooms N`: Number of rooms (default: 8)
 - `-p, --permutations N`: Generate N different valid schedules (default: 1). Output files will be numbered (e.g., schedule1.csv, schedule2.csv)
 - `--max-tries N`: Maximum random placement attempts for WGs (default: 5000)
@@ -93,8 +112,8 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv --verbose --max-tries 1
 # Use a custom number of rooms
 python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 10
 
-# Alternative single-phase scheduler
-python stage1.py WG.csv -o schedule.csv --verbose
+# Use a custom configuration file
+python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -c my_config.yaml
 ```
 
 ## Architecture Notes
@@ -108,6 +127,6 @@ python stage1.py WG.csv -o schedule.csv --verbose
 
 ## Data Format Requirements
 
-- WG CSV: Must have headers "Name of Group" and "Quantity of Sessions Needed"
-- BOF CSV: Complex format where BOF names are extracted from column AG (33rd column, 0-indexed as 32)
-- Output CSV: 5×8 grid with "Room 1" through "Room 8" headers
+- WG CSV: Column indices specified in config.yaml. Name column must contain group names, length column must contain integers 1-3
+- BOF CSV: Column index specified in config.yaml. All BOFs are single-session (length=1)
+- Output CSV: 5×N grid with "Room 1" through "Room N" headers (N determined by `-r` option)

@@ -14,6 +14,21 @@ Uses a two-phase randomized placement algorithm with backtracking: WGs first, th
 
 - Python 3.6+ (no external dependencies, standard library only)
 
+## Configuration
+
+CSV column mappings are specified in `config.yaml` using 0-based indices:
+
+```yaml
+wg:
+  name_column: 0      # Working group name column
+  length_column: 17   # Session count column (1-3)
+
+bof:
+  name_column: 32     # BOF name column (column AG)
+```
+
+Use `-c/--config` to specify an alternate configuration file.
+
 ## Common Commands
 
 ```bash
@@ -31,6 +46,9 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv --verbose --max-tries 1
 
 # Custom number of rooms (default is 8)
 python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 10
+
+# Use custom configuration file
+python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -c my_config.yaml
 ```
 
 ## Architecture
@@ -63,14 +81,16 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 10
 ## Input File Formats
 
 ### WG.csv (Working Groups)
-- Required headers: "Name of Group", "Quantity of Sessions Needed"
-- "Quantity of Sessions Needed" must be 1, 2, or 3
+- Column indices specified in `config.yaml`
+- Name column: contains working group names
+- Length column: must contain integers 1, 2, or 3
+- Default indices: name=0, length=17
 
 ### BOF.csv (Birds of a Feather)
-- Complex multi-column format
-- BOF names extracted from **column AG only** (33rd column, 0-indexed as 32)
-- All other columns ignored
-- Takes first line of multi-line cells
+- Column index specified in `config.yaml`
+- Name column: contains BOF names (takes first line if multi-line cell)
+- Default index: name=32 (column AG)
+- All BOFs are single-session (length=1)
 
 ### schedule.csv (Output)
 - Header row: "Room 1", "Room 2", ..., "Room N"

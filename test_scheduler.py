@@ -39,7 +39,7 @@ class TestCSVReaders(unittest.TestCase):
             writer.writerow(["Test WG 1", "2"])
             writer.writerow(["Test WG 2", "1"])
         
-        wgroups = read_wgroups(wg_path)
+        wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
         self.assertEqual(len(wgroups), 2)
         self.assertEqual(wgroups[0], ("Test WG 1", 2))
         self.assertEqual(wgroups[1], ("Test WG 2", 1))
@@ -53,7 +53,7 @@ class TestCSVReaders(unittest.TestCase):
             writer.writerow(["Bad WG", "5"])  # Invalid: must be 1-3
         
         with self.assertRaises(SystemExit):
-            read_wgroups(wg_path)
+            read_wgroups(wg_path, name_col=0, length_col=1)
     
     def test_read_bofs_valid(self):
         """Test reading valid BOF CSV with column AG"""
@@ -72,7 +72,7 @@ class TestCSVReaders(unittest.TestCase):
             row2[32] = "BOF 2"
             writer.writerow(row2)
         
-        bofs = read_bofs(bof_path)
+        bofs = read_bofs(bof_path, name_col=32)
         self.assertEqual(len(bofs), 2)
         self.assertEqual(bofs[0], ("BOF 1", 1))
         self.assertEqual(bofs[1], ("BOF 2", 1))
@@ -222,8 +222,8 @@ class TestEndToEnd(unittest.TestCase):
             writer.writerow(row1)
         
         # Run scheduling
-        wgroups = read_wgroups(wg_path)
-        bofs = read_bofs(bof_path)
+        wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
+        bofs = read_bofs(bof_path, name_col=32)
         
         grid, failed, empty_rows = greedy_place_wgroups(wgroups, max_tries=100)
         self.assertIsNone(failed)
