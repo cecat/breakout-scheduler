@@ -5,7 +5,7 @@
 This is a Python-based conference scheduling system for TPC breakout sessions. 
 These are parallel sessions scheduled in 90-minute blocks.
 
-For TPC26 we have eight breakout rooms and 5 time slots, so there will be a
+For TPC26 we have eight breakout rooms and five time slots, so there will be a
 total capacity for 40 blocks.
 
 The system schedules:
