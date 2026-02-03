@@ -290,7 +290,8 @@ if __name__ == "__main__":
         filled = sum(1 for row in grid for cell in row if cell)
         empty_slots = CAPACITY - filled
         tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests=0, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}, tries={tries}")
+        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests=0, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
+        print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
         write_schedule(grid, out_path)
         print(f"✓  WG‐only schedule written to {out_path!r}.")
         sys.exit(0)
@@ -316,7 +317,7 @@ if __name__ == "__main__":
         # Stats
         filled = sum(1 for row in new_grid for cell in row if cell)
         empty_slots = CAPACITY - filled
-        print(f"ℹ  Stats: WG requests=-, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}, tries=-")
+        print(f"ℹ  Stats: WG requests=-, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
         write_schedule(new_grid, sched_path)
         print(f"✓  Updated schedule with BOFs written back to {sched_path!r}.")
         sys.exit(0)
@@ -351,7 +352,8 @@ if __name__ == "__main__":
         filled = sum(1 for row in new_grid for cell in row if cell)
         empty_slots = CAPACITY - filled
         tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}, tries={tries}")
+        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
+        print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
         write_schedule(new_grid, out_path)
         print(f"✓  Final schedule (WG + BOF) written to {out_path!r}.")
         sys.exit(0)
