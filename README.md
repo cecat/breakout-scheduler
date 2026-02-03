@@ -15,7 +15,7 @@ The system schedules:
 The scheduler defaults to a 5×8 grid (5 time blocks × 8 rooms) with a
 two-phase approach:
 1. First, place Working Groups using randomized placement with backtracking
-2. Then, fill remaining empty cells with BOFs (which are typically single slots).
+2. Then, fill remaining empty slots with BOFs (which are typically single slots).
 
 ## Requirements
 
