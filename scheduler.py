@@ -212,8 +212,6 @@ def fill_bofs(grid, bofs, verbose=False):
     """
     # Collect all empty coordinates
     empties = [(r, c) for r in range(NUM_BLOCKS) for c in range(NUM_ROOMS) if grid[r][c] is None]
-    if verbose:
-        print(f"    → {len(empties)} empty cell(s) available for BOFs.")
     random.shuffle(empties)
 
     new_grid = [row[:] for row in grid]
@@ -306,7 +304,7 @@ if __name__ == "__main__":
                 print("⚠  Warning: The following time slot(s) have no Working Group assigned:",
                       ", ".join(f"Time Slot {r+1}" for r in empty_rows))
             # Stats
-            filled = sum(1 for row in grid for cell in row if cell)
+            filled = sum(1 for row in grid for slot in row if slot)
             tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
             # Check if any time slot is completely empty
             empty_timeslots = [i+1 for i, row in enumerate(grid) if not any(row)]
@@ -338,7 +336,7 @@ if __name__ == "__main__":
             print("⚠  Warning: These time slot(s) remain empty after filling BOFs:",
                   ", ".join(f"Time Slot {r+1}" for r in empty_after))
         # Stats
-        filled = sum(1 for row in new_grid for cell in row if cell)
+        filled = sum(1 for row in new_grid for slot in row if slot)
         empty_timeslots = [i+1 for i, row in enumerate(new_grid) if not any(row)]
         timeslot_info = f", empty time slots: {','.join(map(str, empty_timeslots))}" if empty_timeslots else ""
         print(f"ℹ  {len(bofs)} BOFs added, slots filled: {filled}/{CAPACITY}{timeslot_info}")
@@ -385,7 +383,7 @@ if __name__ == "__main__":
                       ", ".join(f"Time Slot {r+1}" for r in empty_after))
 
             # Stats
-            filled = sum(1 for row in new_grid for cell in row if cell)
+            filled = sum(1 for row in new_grid for slot in row if slot)
             tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
             # Check if any time slot is completely empty
             empty_timeslots = [i+1 for i, row in enumerate(new_grid) if not any(row)]
