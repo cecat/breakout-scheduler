@@ -300,8 +300,8 @@ if __name__ == "__main__":
                                                             args.max_tries,
                                                             args.verbose)
             if empty_rows and args.verbose:
-                print("⚠  Warning: The following block(s) have no Working Group assigned:",
-                      ", ".join(f"Block {r+1}" for r in empty_rows))
+                print("⚠  Warning: The following time slot(s) have no Working Group assigned:",
+                      ", ".join(f"Time Slot {r+1}" for r in empty_rows))
             # Stats
             filled = sum(1 for row in grid for cell in row if cell)
             empty_slots = CAPACITY - filled
@@ -335,8 +335,8 @@ if __name__ == "__main__":
                      f"Example leftover: “{leftovers[0]}”.")
         empty_after = [i for i, row in enumerate(new_grid) if not any(row)]
         if empty_after:
-            print("⚠  Warning: These block(s) remain empty after filling BOFs:",
-                  ", ".join(f"Block {r+1}" for r in empty_after))
+            print("⚠  Warning: These time slot(s) remain empty after filling BOFs:",
+                  ", ".join(f"Time Slot {r+1}" for r in empty_after))
         # Stats
         filled = sum(1 for row in new_grid for cell in row if cell)
         empty_slots = CAPACITY - filled
@@ -367,8 +367,8 @@ if __name__ == "__main__":
                 sys.exit(f"✖  Unexpected: Could not place WG “{failed}”.")
 
             if args.verbose and empty_rows:
-                print("⚠  After placing WGs, these block(s) are still empty:",
-                      ", ".join(f"Block {r+1}" for r in empty_rows))
+                print("⚠  After placing WGs, these time slot(s) are still empty:",
+                      ", ".join(f"Time Slot {r+1}" for r in empty_rows))
 
             # Fill BOFs into any remaining empty cells
             new_grid, leftovers = fill_bofs(grid_wg, bofs, args.verbose)
@@ -377,8 +377,8 @@ if __name__ == "__main__":
                          f"Example leftover: “{leftovers[0]}”.")
             empty_after = [i for i, row in enumerate(new_grid) if not any(row)]
             if empty_after and args.verbose:
-                print("⚠  Warning: After placing BOFs, these block(s) remain empty:",
-                      ", ".join(f"Block {r+1}" for r in empty_after))
+                print("⚠  Warning: After placing BOFs, these time slot(s) remain empty:",
+                      ", ".join(f"Time Slot {r+1}" for r in empty_after))
 
             # Stats
             filled = sum(1 for row in new_grid for cell in row if cell)
