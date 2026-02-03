@@ -1,0 +1,96 @@
+# AGENTS.md
+
+This file provides guidance to WARP (warp.dev) when working with code in this repository.
+
+## Project Overview
+
+Python-based conference scheduling system for TPC breakout sessions. Schedules two types of sessions onto a 5×6 grid (5 time blocks × 6 rooms):
+- **Working Groups (WGs)**: Variable-length sessions (1-3 consecutive blocks in same room)
+- **BOFs (Birds of a Feather)**: Single-block sessions that fill remaining slots
+
+Uses a two-phase randomized placement algorithm with backtracking: WGs first, then BOFs.
+
+## Requirements
+
+- Python 3.6+ (no external dependencies, standard library only)
+
+## Common Commands
+
+```bash
+# Schedule Working Groups only
+python scheduler.py -w WG.csv -s schedule.csv
+
+# Schedule BOFs only (updates existing schedule in place)
+python scheduler.py -b BOF.csv -s schedule.csv
+
+# Schedule both WGs and BOFs together
+python scheduler.py -w WG.csv -b BOF.csv -s final_schedule.csv
+
+# Verbose mode with custom retry limit
+python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv --verbose --max-tries 10000
+
+# Custom number of rooms (default is 6)
+python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 8
+```
+
+## Architecture
+
+### Core Algorithm
+- **Two-phase scheduling**: `scheduler.py` has three operating modes:
+  1. WG-only: Schedule working groups into empty grid
+  2. BOF-only: Fill remaining empty cells in existing schedule
+  3. Combined: Schedule WGs first, then fill with BOFs
+
+- **Placement strategy**: Randomized first-fit with backtracking
+  - For WGs: Shuffle order, sort by descending length, try up to `max_tries` random placements
+  - For BOFs: Randomly shuffle empty cell positions, fill sequentially
+
+- **Constraint handling**:
+  - WGs require consecutive blocks in same room (vertical placement in grid)
+  - BOFs are single-block (any empty cell)
+  - Strict capacity checking: total WG blocks must not exceed grid capacity (5 × NUM_ROOMS)
+
+### Data Structures
+- Grid representation: `grid[block_index][room_index]` where each cell is a session name or None
+- Constants: `NUM_BLOCKS = 5`, `NUM_ROOMS = 6` (default, overridable via `-r`)
+
+### Key Functions
+- `greedy_place_wgroups()`: Randomized WG placement with retry logic, returns grid and empty row warnings
+- `fill_bofs()`: Fills BOFs into empty cells of existing grid
+- `read_wgroups()`, `read_bofs()`: CSV parsers with strict validation
+- `write_schedule()`: Outputs 5×N grid with "Room 1"..."Room N" headers
+
+## Input File Formats
+
+### WG.csv (Working Groups)
+- Required headers: "Name of Group", "Quantity of Sessions Needed"
+- "Quantity of Sessions Needed" must be 1, 2, or 3
+
+### BOF.csv (Birds of a Feather)
+- Complex multi-column format
+- BOF names extracted from **column AG only** (33rd column, 0-indexed as 32)
+- All other columns ignored
+- Takes first line of multi-line cells
+
+### schedule.csv (Output)
+- Header row: "Room 1", "Room 2", ..., "Room N"
+- 5 data rows (one per time block)
+- Empty cells are blank strings
+
+## Error Handling
+
+- Fatal errors cause immediate `sys.exit()` with ✖ prefix:
+  - Total WG blocks exceed capacity
+  - WG cannot be placed after max_tries attempts
+  - Too many BOFs for available empty cells
+  - Missing/malformed input files
+  
+- Warnings printed with ⚠ prefix (non-fatal):
+  - Empty time blocks after scheduling
+
+## Development Notes
+
+- No test suite exists; validate manually by inspecting output schedule.csv
+- CSV encoding: UTF-8 with BOM support (`encoding="utf-8-sig"`)
+- All placement uses Python's `random` module for non-deterministic behavior
+- Exit codes: 0 for success, 1 for errors
