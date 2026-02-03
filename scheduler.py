@@ -286,6 +286,9 @@ if __name__ == "__main__":
     # 1) Only WGs  → schedule WGs → write & exit
     if has_w and not has_b:
         base_path = args.schedule or "schedule.csv"
+        wg_blocks = sum(length for _, length in wgroups)
+        if args.permutations > 1:
+            print(f"* Scheduling {len(wgroups)} WGs ({wg_blocks} slots), 0 BOFs")
         # Generate requested number of permutations
         for perm in range(1, args.permutations + 1):
             if args.permutations > 1:
@@ -305,18 +308,14 @@ if __name__ == "__main__":
             # Stats
             filled = sum(1 for row in grid for cell in row if cell)
             tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-            wg_blocks = sum(length for _, length in wgroups)
             # Check if any time slot is completely empty
             empty_timeslots = [i+1 for i, row in enumerate(grid) if not any(row)]
-            timeslot_info = f", empty time slots: {','.join(map(str, empty_timeslots))}" if empty_timeslots else ""
-            if args.permutations > 1:
-                print(f"ℹ  Schedule {perm}/{args.permutations}: {len(wgroups)} WGs ({wg_blocks} slots), 0 BOFs, slots filled: {filled}/{CAPACITY}{timeslot_info}")
-            else:
-                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), 0 BOFs, slots filled: {filled}/{CAPACITY}, evaluated {tries} schedule{'s' if tries != 1 else ''}{timeslot_info}")
+            timeslot_info = f" (time slot{'s' if len(empty_timeslots) != 1 else ''} {','.join(map(str, empty_timeslots))} empty)" if empty_timeslots else ""
             write_schedule(grid, out_path)
             if args.permutations > 1:
-                print(f"✓  WG‐only schedule {perm} written to {out_path!r}.")
+                print(f"  {out_path}: {filled}/{CAPACITY} slots filled{timeslot_info}")
             else:
+                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), 0 BOFs, {filled}/{CAPACITY} slots filled, evaluated {tries} schedule{'s' if tries != 1 else ''}{timeslot_info}")
                 print(f"✓  WG‐only schedule written to {out_path!r}.")
         sys.exit(0)
 
@@ -350,6 +349,9 @@ if __name__ == "__main__":
     # 3) Both WGs and BOFs  → schedule WGs first, then BOFs
     if has_w and has_b:
         base_path = args.schedule or "schedule.csv"
+        wg_blocks = sum(length for _, length in wgroups)
+        if args.permutations > 1:
+            print(f"* Scheduling {len(wgroups)} WGs ({wg_blocks} slots), {len(bofs)} BOFs")
         # Generate requested number of permutations
         for perm in range(1, args.permutations + 1):
             if args.permutations > 1:
@@ -385,18 +387,14 @@ if __name__ == "__main__":
             # Stats
             filled = sum(1 for row in new_grid for cell in row if cell)
             tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-            wg_blocks = sum(length for _, length in wgroups)
             # Check if any time slot is completely empty
             empty_timeslots = [i+1 for i, row in enumerate(new_grid) if not any(row)]
-            timeslot_info = f", empty time slots: {','.join(map(str, empty_timeslots))}" if empty_timeslots else ""
-            if args.permutations > 1:
-                print(f"ℹ  Schedule {perm}/{args.permutations}: {len(wgroups)} WGs ({wg_blocks} slots), {len(bofs)} BOFs, slots filled: {filled}/{CAPACITY}{timeslot_info}")
-            else:
-                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), {len(bofs)} BOFs, slots filled: {filled}/{CAPACITY}, evaluated {tries} schedule{'s' if tries != 1 else ''}{timeslot_info}")
+            timeslot_info = f" (time slot{'s' if len(empty_timeslots) != 1 else ''} {','.join(map(str, empty_timeslots))} empty)" if empty_timeslots else ""
             write_schedule(new_grid, out_path)
             if args.permutations > 1:
-                print(f"✓  Final schedule {perm} (WG + BOF) written to {out_path!r}.")
+                print(f"  {out_path}: {filled}/{CAPACITY} slots filled{timeslot_info}")
             else:
+                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), {len(bofs)} BOFs, {filled}/{CAPACITY} slots filled, evaluated {tries} schedule{'s' if tries != 1 else ''}{timeslot_info}")
                 print(f"✓  Final schedule (WG + BOF) written to {out_path!r}.")
         sys.exit(0)
 
