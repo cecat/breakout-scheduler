@@ -129,8 +129,8 @@ def read_wgroups(path, name_col, length_col):
             except ValueError:
                 sys.exit(f"✖  Unable to parse length for “{name}” (row {row_num}). Must be an integer.")
             if length < 1:
-                print(f"⚠  WG “{name}” requested {length} slots, skipping.")
-                continue
+                print(f"⚠  WG “{name}” requested {length} slots, defaulting to 1.")
+                length = 1
             if length > 5:
                 print(f"⚠  WG “{name}” requested {length} slots, capping at 5.")
                 length = 5
@@ -167,8 +167,8 @@ def read_bofs(path, name_col, length_col):
             except ValueError:
                 sys.exit(f"✖  Unable to parse length for '{name}' (row {row_num}). Must be an integer.")
             if length < 1:
-                print(f"⚠  BOF '{name}' requested {length} slots, skipping.")
-                continue
+                print(f"⚠  BOF '{name}' requested {length} slots, defaulting to 1.")
+                length = 1
             if length > 2:
                 print(f"⚠  BOF '{name}' requested {length} slots, capping at 2.")
                 length = 2
