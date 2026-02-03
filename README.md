@@ -17,6 +17,11 @@ two-phase approach:
 1. First, place Working Groups using randomized placement with backtracking
 2. Then, fill remaining empty slots with BOFs (which are typically single slots).
 
+Multiple permutations can be generated (see **Command Line Options**), providing alternatives
+for cases where certain groups do not want to be scheduled in the same sessions.  The
+random placement algorithm minimizes (but does not eliminate) duplication.
+
+
 ## Requirements
 
 - **Python**: 3.6 or higher
@@ -55,6 +60,18 @@ The test suite includes:
 - End-to-end integration tests
 - Error handling tests
 
+## Command Line Options
+
+### scheduler.py
+
+- `-w, --wgroups FILE`: CSV file containing Working Groups (required headers: "Name of Group", "Quantity of Sessions Needed")
+- `-b, --bofs FILE`: CSV file containing BOFs (reads from column AG/33rd column)
+- `-s, --schedule FILE`: Schedule CSV file to read (for BOF-only mode) or write
+- `-r, --rooms N`: Number of rooms (default: 8)
+- `-p, --permutations N`: Generate N different valid schedules (default: 1). Output files will be numbered (e.g., schedule1.csv, schedule2.csv)
+- `--max-tries N`: Maximum random placement attempts for WGs (default: 5000)
+- `--verbose`: Show diagnostic information during scheduling
+
 ## Common Commands
 
 ```bash
@@ -67,11 +84,14 @@ python scheduler.py -b BOF.csv -s schedule.csv
 # Schedule both WGs and BOFs
 python scheduler.py -w WG.csv -b BOF.csv -s final_schedule.csv
 
+# Generate 5 different valid schedules
+python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -p 5
+
 # Use verbose mode and custom retry limit
 python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv --verbose --max-tries 10000
 
-# Use a custom number of rooms (default is 8; this sets 8 rooms)
-python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 8
+# Use a custom number of rooms
+python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 10
 
 # Alternative single-phase scheduler
 python stage1.py WG.csv -o schedule.csv --verbose
