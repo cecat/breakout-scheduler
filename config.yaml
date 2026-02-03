@@ -1,0 +1,11 @@
+# Configuration for breakout-scheduler CSV column mappings
+# All indices are 0-based (first column = 0)
+
+# Working Groups CSV configuration
+wg:
+  name_column: 0      # Column containing group name (default: "Name of Group")
+  length_column: 17   # Column containing session length 1-3 (default: "Quantity of Sessions Needed")
+
+# Birds of a Feather CSV configuration  
+bof:
+  name_column: 32     # Column containing BOF name (default: column AG, 33rd column)
