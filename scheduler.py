@@ -300,20 +300,18 @@ if __name__ == "__main__":
             grid, failed, empty_rows = greedy_place_wgroups(wgroups,
                                                             args.max_tries,
                                                             args.verbose)
-            if empty_rows and args.verbose:
-                print("⚠  Warning: The following time slot(s) have no Working Group assigned:",
-                      ", ".join(f"Time Slot {r+1}" for r in empty_rows))
+            # Don't print verbose warning - will be shown inline
             # Stats
             filled = sum(1 for row in grid for slot in row if slot)
             tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-            # Check if any time slot is completely empty
-            empty_timeslots = [i+1 for i, row in enumerate(grid) if not any(row)]
-            timeslot_info = f" (time slot{'s' if len(empty_timeslots) != 1 else ''} {','.join(map(str, empty_timeslots))} empty)" if empty_timeslots else ""
+            # Check if any session (time period across all rooms) is completely empty
+            empty_sessions = [i+1 for i, row in enumerate(grid) if not any(row)]
+            session_info = f" (session{'s' if len(empty_sessions) != 1 else ''} {','.join(map(str, empty_sessions))} unused)" if empty_sessions else ""
             write_schedule(grid, out_path)
             if args.permutations > 1:
-                print(f"  {out_path}: {filled}/{CAPACITY} slots filled{timeslot_info}")
+                print(f"  {out_path}: {filled}/{CAPACITY} slots filled{session_info}")
             else:
-                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), 0 BOFs, {filled}/{CAPACITY} slots filled, evaluated {tries} schedule{'s' if tries != 1 else ''}{timeslot_info}")
+                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), 0 BOFs, {filled}/{CAPACITY} slots filled, evaluated {tries} schedule{'s' if tries != 1 else ''}{session_info}")
                 print(f"✓  WG‐only schedule written to {out_path!r}.")
         sys.exit(0)
 
@@ -332,14 +330,12 @@ if __name__ == "__main__":
             sys.exit(f"✖  {len(leftovers)} BOF(s) could not be placed (no empty slots). "
                      f"Example leftover: “{leftovers[0]}”.")
         empty_after = [i for i, row in enumerate(new_grid) if not any(row)]
-        if empty_after:
-            print("⚠  Warning: These time slot(s) remain empty after filling BOFs:",
-                  ", ".join(f"Time Slot {r+1}" for r in empty_after))
+        # Don't print verbose warning - will be shown inline
         # Stats
         filled = sum(1 for row in new_grid for slot in row if slot)
-        empty_timeslots = [i+1 for i, row in enumerate(new_grid) if not any(row)]
-        timeslot_info = f", empty time slots: {','.join(map(str, empty_timeslots))}" if empty_timeslots else ""
-        print(f"ℹ  {len(bofs)} BOFs added, slots filled: {filled}/{CAPACITY}{timeslot_info}")
+        empty_sessions = [i+1 for i, row in enumerate(new_grid) if not any(row)]
+        session_info = f" (session{'s' if len(empty_sessions) != 1 else ''} {','.join(map(str, empty_sessions))} unused)" if empty_sessions else ""
+        print(f"ℹ  {len(bofs)} BOFs added, {filled}/{CAPACITY} slots filled{session_info}")
         write_schedule(new_grid, sched_path)
         print(f"✓  Updated schedule with BOFs written back to {sched_path!r}.")
         sys.exit(0)
@@ -368,9 +364,7 @@ if __name__ == "__main__":
                 # (This sys.exit is redundant since greedy_place_wgroups() already sys.exit on failure)
                 sys.exit(f"✖  Unexpected: Could not place WG “{failed}”.")
 
-            if args.verbose and empty_rows:
-                print("⚠  After placing WGs, these time slot(s) are still empty:",
-                      ", ".join(f"Time Slot {r+1}" for r in empty_rows))
+            # Don't print verbose warning - will be shown inline
 
             # Fill BOFs into any remaining empty cells
             new_grid, leftovers = fill_bofs(grid_wg, bofs, args.verbose)
@@ -378,21 +372,17 @@ if __name__ == "__main__":
                 sys.exit(f"✖  {len(leftovers)} BOF(s) could not be placed (no empty slots). "
                          f"Example leftover: “{leftovers[0]}”.")
             empty_after = [i for i, row in enumerate(new_grid) if not any(row)]
-            if empty_after and args.verbose:
-                print("⚠  Warning: After placing BOFs, these time slot(s) remain empty:",
-                      ", ".join(f"Time Slot {r+1}" for r in empty_after))
-
             # Stats
             filled = sum(1 for row in new_grid for slot in row if slot)
             tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-            # Check if any time slot is completely empty
-            empty_timeslots = [i+1 for i, row in enumerate(new_grid) if not any(row)]
-            timeslot_info = f" (time slot{'s' if len(empty_timeslots) != 1 else ''} {','.join(map(str, empty_timeslots))} empty)" if empty_timeslots else ""
+            # Check if any session (time period across all rooms) is completely empty
+            empty_sessions = [i+1 for i, row in enumerate(new_grid) if not any(row)]
+            session_info = f" (session{'s' if len(empty_sessions) != 1 else ''} {','.join(map(str, empty_sessions))} unused)" if empty_sessions else ""
             write_schedule(new_grid, out_path)
             if args.permutations > 1:
-                print(f"  {out_path}: {filled}/{CAPACITY} slots filled{timeslot_info}")
+                print(f"  {out_path}: {filled}/{CAPACITY} slots filled{session_info}")
             else:
-                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), {len(bofs)} BOFs, {filled}/{CAPACITY} slots filled, evaluated {tries} schedule{'s' if tries != 1 else ''}{timeslot_info}")
+                print(f"ℹ  {len(wgroups)} WGs ({wg_blocks} slots), {len(bofs)} BOFs, {filled}/{CAPACITY} slots filled, evaluated {tries} schedule{'s' if tries != 1 else ''}{session_info}")
                 print(f"✓  Final schedule (WG + BOF) written to {out_path!r}.")
         sys.exit(0)
 
