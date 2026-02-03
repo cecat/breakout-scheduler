@@ -239,6 +239,102 @@ class TestEndToEnd(unittest.TestCase):
         # Count total sessions
         total = sum(1 for row in final_grid for cell in row if cell is not None)
         self.assertEqual(total, 4)  # 2+1+1 = 4 sessions
+    
+    def test_all_sessions_scheduled(self):
+        """Test that all requested sessions appear in the schedule"""
+        wgroups = [("WG 1", 2), ("WG 2", 1), ("WG 3", 3)]
+        bofs = [("BOF 1", 1), ("BOF 2", 1)]
+        
+        # Schedule WGs
+        grid, failed, _ = greedy_place_wgroups(wgroups, max_tries=100)
+        self.assertIsNone(failed, "WG placement should succeed")
+        
+        # Add BOFs
+        final_grid, leftovers = fill_bofs(grid, bofs)
+        self.assertEqual(len(leftovers), 0, "All BOFs should be placed")
+        
+        # Verify all sessions appear in grid
+        # Count occurrences of each session
+        from collections import Counter
+        all_cells = [cell for row in final_grid for cell in row if cell is not None]
+        counts = Counter(all_cells)
+        
+        # Verify WG counts (should match requested lengths)
+        self.assertEqual(counts["WG 1"], 2)
+        self.assertEqual(counts["WG 2"], 1)
+        self.assertEqual(counts["WG 3"], 3)
+        # Verify BOF counts (always 1)
+        self.assertEqual(counts["BOF 1"], 1)
+        self.assertEqual(counts["BOF 2"], 1)
+    
+    def test_output_dimensions(self):
+        """Test that output schedule has correct dimensions"""
+        wgroups = [("WG Test", 1)]
+        grid, failed, _ = greedy_place_wgroups(wgroups, max_tries=100)
+        self.assertIsNone(failed)
+        
+        # Verify grid dimensions
+        self.assertEqual(len(grid), NUM_BLOCKS, f"Grid should have {NUM_BLOCKS} time blocks")
+        for block_idx, row in enumerate(grid):
+            self.assertEqual(len(row), NUM_ROOMS, 
+                           f"Block {block_idx} should have {NUM_ROOMS} rooms")
+        
+        # Write to CSV and verify output format
+        out_path = os.path.join(self.test_dir, "test_output.csv")
+        write_schedule(grid, out_path)
+        
+        with open(out_path, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            self.assertEqual(len(header), NUM_ROOMS, 
+                           f"Header should have {NUM_ROOMS} room columns")
+            
+            data_rows = list(reader)
+            self.assertEqual(len(data_rows), NUM_BLOCKS,
+                           f"CSV should have {NUM_BLOCKS} data rows")
+    
+    def test_wg_sessions_consecutive(self):
+        """Test that WG sessions are consecutive in same room"""
+        wgroups = [("WG Multi", 3)]
+        grid, failed, _ = greedy_place_wgroups(wgroups, max_tries=100)
+        self.assertIsNone(failed)
+        
+        # Find where "WG Multi" is placed
+        wg_positions = []
+        for block_idx, row in enumerate(grid):
+            for room_idx, cell in enumerate(row):
+                if cell == "WG Multi":
+                    wg_positions.append((block_idx, room_idx))
+        
+        self.assertEqual(len(wg_positions), 3, "Should have 3 sessions")
+        
+        # All should be in same room
+        rooms = [room for _, room in wg_positions]
+        self.assertEqual(len(set(rooms)), 1, "All sessions must be in same room")
+        
+        # Should be consecutive time blocks
+        blocks = sorted([block for block, _ in wg_positions])
+        for i in range(len(blocks) - 1):
+            self.assertEqual(blocks[i+1], blocks[i] + 1, 
+                           "Sessions must be in consecutive time blocks")
+    
+    def test_no_double_booking(self):
+        """Test that no room/time slot has multiple sessions"""
+        wgroups = [("WG A", 1), ("WG B", 1), ("WG C", 2)]
+        bofs = [("BOF X", 1), ("BOF Y", 1)]
+        
+        grid, failed, _ = greedy_place_wgroups(wgroups, max_tries=100)
+        self.assertIsNone(failed)
+        
+        final_grid, leftovers = fill_bofs(grid, bofs)
+        self.assertEqual(len(leftovers), 0)
+        
+        # Each cell should have at most one session
+        for block_idx, row in enumerate(final_grid):
+            for room_idx, cell in enumerate(row):
+                # Cell is either None or a single string (not a list)
+                self.assertTrue(cell is None or isinstance(cell, str),
+                              f"Cell [{block_idx}][{room_idx}] should be None or string")
 
 
 if __name__ == '__main__':
