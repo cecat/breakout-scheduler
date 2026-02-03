@@ -21,11 +21,11 @@ CSV column mappings are specified in `config.yaml` using 0-based indices:
 ```yaml
 wg:
   name_column: 8      # Working group name column
-  length_column: 10   # Session count column (1-3)
+  length_column: 10   # Session count column (1-5, capped at 5)
 
 bof:
   name_column: 8      # BOF name column
-  length_column: 11   # Session count column (1-3)
+  length_column: 11   # Session count column (1-2, capped at 2)
 ```
 
 Use `-c/--config` to specify an alternate configuration file.
@@ -84,13 +84,13 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -c my_config.yaml
 ### WG.csv (Working Groups)
 - Column indices specified in `config.yaml`
 - Name column: contains working group names
-- Length column: must contain integers 1, 2, or 3
-- Default indices: name=0, length=17
+- Length column: integers (1-5, automatically capped at 5 if higher)
+- Default indices: name=8, length=10
 
 ### BOF.csv (Birds of a Feather)
 - Column indices specified in `config.yaml`
 - Name column: contains BOF names (takes first line if multi-line cell)
-- Length column: must contain integers 1, 2, or 3
+- Length column: integers (1-2, automatically capped at 2 if higher)
 - Default indices: name=8, length=11
 
 ### schedule.csv (Output)

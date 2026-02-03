@@ -9,8 +9,8 @@ For TPC26 we have eight breakout rooms and five time slots, so there will be a
 total capacity for 40 blocks.
 
 The system schedules:
-- **Working Groups (WGs)**: Variable-length sessions (1-3 blocks) that require multiple consecutive time slots
-- **BOFs (Birds of a Feather)**: Variable-length sessions (1-3 blocks) that fill remaining empty slots
+- **Working Groups (WGs)**: Variable-length sessions (1-5 blocks) that require multiple consecutive time slots
+- **BOFs (Birds of a Feather)**: Variable-length sessions (1-2 blocks) that fill remaining empty slots
 
 The scheduler defaults to a 5×8 grid (5 time blocks × 8 rooms) with a
 two-phase approach:
@@ -69,12 +69,12 @@ The scheduler uses `config.yaml` to specify which columns to read from your CSV 
 # Working Groups CSV configuration
 wg:
   name_column: 8      # Column with group name
-  length_column: 10   # Column with session count (1-3)
+  length_column: 10   # Column with session count (1-5, capped at 5)
 
 # Birds of a Feather CSV configuration
 bof:
   name_column: 8      # Column with BOF name
-  length_column: 11   # Column with session count (1-3)
+  length_column: 11   # Column with session count (1-2, capped at 2)
 ```
 
 To use a different configuration file, use the `-c/--config` option.
@@ -128,8 +128,8 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -c my_config.yaml
 
 ## Data Format Requirements
 
-- WG CSV: Column indices specified in config.yaml. Name column must contain group names, length column must contain integers 1-3
-- BOF CSV: Column indices specified in config.yaml. Name column must contain BOF names, length column must contain integers 1-3
+- WG CSV: Column indices specified in config.yaml. Name column must contain group names, length column must contain integers (1-5, automatically capped at 5 if higher)
+- BOF CSV: Column indices specified in config.yaml. Name column must contain BOF names, length column must contain integers (1-2, automatically capped at 2 if higher)
 - Output CSV: 5×N grid with "Room 1" through "Room N" headers (N determined by `-r` option)
 
 ## Test Data Generation

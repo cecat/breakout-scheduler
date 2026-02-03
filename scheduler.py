@@ -128,8 +128,12 @@ def read_wgroups(path, name_col, length_col):
                 length = int(row[length_col].strip())
             except ValueError:
                 sys.exit(f"✖  Unable to parse length for “{name}” (row {row_num}). Must be an integer.")
-            if length < 1 or length > 3:
-                sys.exit(f"✖  WG “{name}” asked for {length} blocks (only 1–3 allowed).")
+            if length < 1:
+                print(f"⚠  WG “{name}” requested {length} slots, skipping.")
+                continue
+            if length > 5:
+                print(f"⚠  WG “{name}” requested {length} slots, capping at 5.")
+                length = 5
             wgs.append((name, length))
     return wgs
 
@@ -162,8 +166,12 @@ def read_bofs(path, name_col, length_col):
                 length = int(row[length_col].strip())
             except ValueError:
                 sys.exit(f"✖  Unable to parse length for '{name}' (row {row_num}). Must be an integer.")
-            if length < 1 or length > 3:
-                sys.exit(f"✖  BOF '{name}' asked for {length} blocks (only 1–3 allowed).")
+            if length < 1:
+                print(f"⚠  BOF '{name}' requested {length} slots, skipping.")
+                continue
+            if length > 2:
+                print(f"⚠  BOF '{name}' requested {length} slots, capping at 2.")
+                length = 2
             bofs.append((name, length))
     return bofs
 
@@ -207,7 +215,7 @@ def write_schedule(grid, path):
 # ────────────────────── Placement Algorithms ──────────────────────
 def greedy_place_wgroups(wgroups, max_tries, verbose=False):
     """
-    Try up to max_tries to place all working groups (length 1–3) into an empty 5×8 grid.
+    Try up to max_tries to place all working groups (length 1–5) into an empty 5×8 grid.
     Returns (grid, failed_name or None, empty_rows_list).
       • grid: 5×8 list-of-lists if successful (each cell = group_name or None).
       • failed_name: if a particular WG couldn’t be placed in any attempt, returns its name.
@@ -304,10 +312,10 @@ def fill_bofs(grid, bofs, verbose=False):
     return new_grid, leftovers
 
 
-# ───────────────────────── CLI & Dispatcher ─────────────────────────
+# ─────────────────────────── CLI & Dispatcher ─────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Schedule Working Groups (1–3 blocks) and BOFs (1 block) "
+        description="Schedule Working Groups (1–5 blocks) and BOFs (1–2 blocks) "
                     "into a 5×8 grid."
     )
     parser.add_argument("-w", "--wgroups", help="CSV of Working Groups (Name, Quantity)")
@@ -363,7 +371,7 @@ if __name__ == "__main__":
             sys.exit(f"✖  BOFs file not found: {args.bofs!r}")
         bofs = read_bofs(args.bofs, cfg['bof']['name_column'], cfg['bof']['length_column'])
         if args.verbose:
-            print(f"→ Loaded {len(bofs)} BOF request(s) (each length=1).")
+            print(f"→ Loaded {len(bofs)} BOF request(s).")
 
     # 1) Only WGs  → schedule WGs → write & exit
     if has_w and not has_b:

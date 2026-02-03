@@ -48,7 +48,7 @@ def generate_wg_csv(output_path, name_col, length_col, num_wgs=5):
             "WG: Edge Computing"
         ]
         
-        lengths = [2, 3, 1, 2, 1, 3, 2]  # Mix of 1-3 sessions
+        lengths = [2, 3, 1, 5, 1, 4, 2]  # Mix of 1-5 sessions
         
         for i in range(min(num_wgs, len(wg_names))):
             row = [""] * num_cols
@@ -94,7 +94,7 @@ def generate_bof_csv(output_path, name_col, length_col, num_bofs=4):
             "BOF: Industry Trends"
         ]
         
-        lengths = [1, 2, 1, 1, 2, 1]  # Mix of 1-2 sessions
+        lengths = [1, 2, 1, 1, 2, 1]  # Mix of 1-2 sessions (BOF limit)
         
         for i in range(min(num_bofs, len(bof_names))):
             row = [""] * num_cols

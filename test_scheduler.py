@@ -44,16 +44,19 @@ class TestCSVReaders(unittest.TestCase):
         self.assertEqual(wgroups[0], ("Test WG 1", 2))
         self.assertEqual(wgroups[1], ("Test WG 2", 1))
     
-    def test_read_wgroups_invalid_length(self):
-        """Test that invalid WG length causes exit"""
-        wg_path = os.path.join(self.test_dir, "test_wg_bad.csv")
+    def test_read_wgroups_capped_length(self):
+        """Test that excessive WG length is capped at 5"""
+        wg_path = os.path.join(self.test_dir, "test_wg_cap.csv")
         with open(wg_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(["Name of Group", "Quantity of Sessions Needed"])
-            writer.writerow(["Bad WG", "5"])  # Invalid: must be 1-3
+            writer.writerow(["Long WG", "7"])  # Exceeds limit: will be capped at 5
+            writer.writerow(["Normal WG", "2"])
         
-        with self.assertRaises(SystemExit):
-            read_wgroups(wg_path, name_col=0, length_col=1)
+        wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
+        self.assertEqual(len(wgroups), 2)
+        self.assertEqual(wgroups[0], ("Long WG", 5))  # Capped at 5
+        self.assertEqual(wgroups[1], ("Normal WG", 2))
     
     def test_read_bofs_valid(self):
         """Test reading valid BOF CSV with name and length columns"""
