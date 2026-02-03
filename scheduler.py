@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-schedule_conf_v3.py – 5×6 conference scheduler with two‐phase filling.
+schedule_conf_v3.py – 5×8 conference scheduler with two‐phase filling.
 
   - “Working Groups” (length 1–3 blocks) go first.
   - Then “BOFs” (all length = 1) fill any leftover empty cells.
@@ -23,12 +23,12 @@ COMMAND‐LINE OPTIONS
                          Name of Group, Quantity of Sessions Needed (1, 2 or 3)
   -b, --bofs    FILE   CSV with many columns; we only read column AG (33rd col).
                        Each BOF is length 1, name = first‐line of column AG cell.
-  -s, --schedule FILE  Path to the 5×6 schedule CSV. If “only ‐b” is used, we
+  -s, --schedule FILE  Path to the 5×8 schedule CSV. If “only ‐b” is used, we
                        read & overwrite this file. If “‐w” is used, this is the
                        output filename (default = “schedule.csv”).
   --max-tries N        How many randomised attempts to try when placing WGs
                        (default = 5000).
-  -r, --rooms N        Number of rooms (default = 6).
+  -r, --rooms N        Number of rooms (default = 8).
   --verbose            Print helpful progress/​diagnostic messages.
 
 OUTPUT
@@ -38,7 +38,7 @@ OUTPUT
 
 ERRORS & WARNINGS
 -----------------
-  • If total requested WG‐blocks > 30 ⇒ fatal error with counts.
+  • If total requested WG‐blocks > 40 ⇒ fatal error with counts.
   • If a specific WG cannot be placed after max tries ⇒ fatal error naming it.
   • If too many BOFs to fit into the leftover empty cells ⇒ fatal error listing
     how many BOFs could not be placed.
@@ -53,7 +53,7 @@ import sys
 import os
 
 NUM_BLOCKS = 5
-NUM_ROOMS = 6
+NUM_ROOMS = 8
 CAPACITY = NUM_BLOCKS * NUM_ROOMS
 DEFAULT_MAX_TRIES = 5_000
 
@@ -111,8 +111,8 @@ def read_bofs(path):
 
 def read_schedule(path):
     """
-    Read an existing 5×6 schedule CSV (header + 5 rows).
-    Returns a 5×6 list of lists:  grid[block][room] = group_name or None.
+    Read an existing 5×8 schedule CSV (header + 5 rows).
+    Returns a 5×8 list of lists:  grid[block][room] = group_name or None.
     """
     grid = []
     with open(path, newline="", encoding="utf-8-sig") as f:
@@ -148,9 +148,9 @@ def write_schedule(grid, path):
 # ────────────────────── Placement Algorithms ──────────────────────
 def greedy_place_wgroups(wgroups, max_tries, verbose=False):
     """
-    Try up to max_tries to place all working groups (length 1–3) into an empty 5×6 grid.
+    Try up to max_tries to place all working groups (length 1–3) into an empty 5×8 grid.
     Returns (grid, failed_name or None, empty_rows_list).
-      • grid: 5×6 list-of-lists if successful (each cell = group_name or None).
+      • grid: 5×8 list-of-lists if successful (each cell = group_name or None).
       • failed_name: if a particular WG couldn’t be placed in any attempt, returns its name.
       • empty_rows_list: after final placement, which rows have zero sessions.
     """
@@ -203,7 +203,7 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
 
 def fill_bofs(grid, bofs, verbose=False):
     """
-    Given a partially filled 5×6 grid (with None in empty cells) and a list of BOFs
+    Given a partially filled 5×8 grid (with None in empty cells) and a list of BOFs
     [(name,1),…], attempt to fill each BOF into a single free cell.
     Returns (new_grid, leftover_bofs_list).  
       If leftover_bofs_list is non‐empty, there weren’t enough empty cells.
@@ -231,7 +231,7 @@ def fill_bofs(grid, bofs, verbose=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Schedule Working Groups (1–3 blocks) and BOFs (1 block) "
-                    "into a 5×6 grid."
+                    "into a 5×8 grid."
     )
     parser.add_argument("-w", "--wgroups", help="CSV of Working Groups (Name, Quantity)")
     parser.add_argument("-b", "--bofs", help="CSV of BOFs (we read column AG).")
