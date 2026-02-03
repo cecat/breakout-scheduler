@@ -158,6 +158,7 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
     if total_blocks > CAPACITY:
         sys.exit(f"✖  Total requested WG blocks = {total_blocks}, capacity = {CAPACITY}.")
 
+    greedy_place_wgroups.last_attempts = 0
     for attempt in range(1, max_tries + 1):
         # Shuffle order of WGs, then sort by descending length
         a_list = random.sample(wgroups, len(wgroups))
@@ -195,6 +196,7 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
 
         # Now see which rows (blocks) remain completely empty
         empty_rows = [idx for idx, row in enumerate(grid) if not any(row)]
+        greedy_place_wgroups.last_attempts = attempt
         return grid, None, empty_rows  # success!
 
     # If we reach here ⇒ no placement found after max_tries
@@ -284,6 +286,11 @@ if __name__ == "__main__":
         if empty_rows:
             print("⚠  Warning: The following block(s) have no Working Group assigned:",
                   ", ".join(f"Block {r+1}" for r in empty_rows))
+        # Stats
+        filled = sum(1 for row in grid for cell in row if cell)
+        empty_slots = CAPACITY - filled
+        tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
+        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests=0, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}, tries={tries}")
         write_schedule(grid, out_path)
         print(f"✓  WG‐only schedule written to {out_path!r}.")
         sys.exit(0)
@@ -306,6 +313,10 @@ if __name__ == "__main__":
         if empty_after:
             print("⚠  Warning: These block(s) remain empty after filling BOFs:",
                   ", ".join(f"Block {r+1}" for r in empty_after))
+        # Stats
+        filled = sum(1 for row in new_grid for cell in row if cell)
+        empty_slots = CAPACITY - filled
+        print(f"ℹ  Stats: WG requests=-, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}, tries=-")
         write_schedule(new_grid, sched_path)
         print(f"✓  Updated schedule with BOFs written back to {sched_path!r}.")
         sys.exit(0)
@@ -336,6 +347,11 @@ if __name__ == "__main__":
             print("⚠  Warning: After placing BOFs, these block(s) remain empty:",
                   ", ".join(f"Block {r+1}" for r in empty_after))
 
+        # Stats
+        filled = sum(1 for row in new_grid for cell in row if cell)
+        empty_slots = CAPACITY - filled
+        tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
+        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}, tries={tries}")
         write_schedule(new_grid, out_path)
         print(f"✓  Final schedule (WG + BOF) written to {out_path!r}.")
         sys.exit(0)
