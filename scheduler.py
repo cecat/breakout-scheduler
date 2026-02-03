@@ -242,6 +242,8 @@ if __name__ == "__main__":
                         help=f"Max random attempts for placing WGs (default {DEFAULT_MAX_TRIES})")
     parser.add_argument("-r", "--rooms", type=int, default=NUM_ROOMS,
                         help=f"Number of rooms (default {NUM_ROOMS})")
+    parser.add_argument("-p", "--permutations", type=int, default=1,
+                        help="Generate multiple valid schedules (default 1)")
     parser.add_argument("--verbose", action="store_true",
                         help="Show diagnostic info (attempt counts, empty rows, etc.)")
     args = parser.parse_args()
@@ -249,6 +251,10 @@ if __name__ == "__main__":
     # Update NUM_ROOMS based on command line argument
     NUM_ROOMS = args.rooms
     CAPACITY = NUM_BLOCKS * NUM_ROOMS
+    
+    # Validate permutations
+    if args.permutations < 1:
+        sys.exit("✖  Permutations must be >= 1")
 
     has_w = bool(args.wgroups)
     has_b = bool(args.bofs)
@@ -279,21 +285,38 @@ if __name__ == "__main__":
 
     # 1) Only WGs  → schedule WGs → write & exit
     if has_w and not has_b:
-        out_path = args.schedule or "schedule.csv"
-        grid, failed, empty_rows = greedy_place_wgroups(wgroups,
-                                                        args.max_tries,
-                                                        args.verbose)
-        if empty_rows:
-            print("⚠  Warning: The following block(s) have no Working Group assigned:",
-                  ", ".join(f"Block {r+1}" for r in empty_rows))
-        # Stats
-        filled = sum(1 for row in grid for cell in row if cell)
-        empty_slots = CAPACITY - filled
-        tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests=0, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
-        print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
-        write_schedule(grid, out_path)
-        print(f"✓  WG‐only schedule written to {out_path!r}.")
+        base_path = args.schedule or "schedule.csv"
+        # Generate requested number of permutations
+        for perm in range(1, args.permutations + 1):
+            if args.permutations > 1:
+                # Multi-permutation: use schedule1.csv, schedule2.csv, etc.
+                out_path = base_path.replace(".csv", f"{perm}.csv")
+                if not out_path.endswith(".csv"):
+                    out_path = f"{base_path}{perm}.csv"
+            else:
+                out_path = base_path
+            
+            grid, failed, empty_rows = greedy_place_wgroups(wgroups,
+                                                            args.max_tries,
+                                                            args.verbose)
+            if empty_rows and args.verbose:
+                print("⚠  Warning: The following block(s) have no Working Group assigned:",
+                      ", ".join(f"Block {r+1}" for r in empty_rows))
+            # Stats
+            filled = sum(1 for row in grid for cell in row if cell)
+            empty_slots = CAPACITY - filled
+            tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
+            if args.permutations > 1:
+                print(f"ℹ  Schedule {perm}/{args.permutations}: WG requests={len(wgroups)}, BOF requests=0, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
+                print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
+            else:
+                print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests=0, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
+                print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
+            write_schedule(grid, out_path)
+            if args.permutations > 1:
+                print(f"✓  WG‐only schedule {perm} written to {out_path!r}.")
+            else:
+                print(f"✓  WG‐only schedule written to {out_path!r}.")
         sys.exit(0)
 
     # 2) Only BOFs (+ existing schedule) → read → fill BOFs → write back
@@ -324,38 +347,54 @@ if __name__ == "__main__":
 
     # 3) Both WGs and BOFs  → schedule WGs first, then BOFs
     if has_w and has_b:
-        out_path = args.schedule or "schedule.csv"
+        base_path = args.schedule or "schedule.csv"
+        # Generate requested number of permutations
+        for perm in range(1, args.permutations + 1):
+            if args.permutations > 1:
+                # Multi-permutation: use schedule1.csv, schedule2.csv, etc.
+                out_path = base_path.replace(".csv", f"{perm}.csv")
+                if not out_path.endswith(".csv"):
+                    out_path = f"{base_path}{perm}.csv"
+            else:
+                out_path = base_path
 
-        # Place Working Groups
-        grid_wg, failed, empty_rows = greedy_place_wgroups(wgroups,
-                                                           args.max_tries,
-                                                           args.verbose)
-        if failed:
-            # (This sys.exit is redundant since greedy_place_wgroups() already sys.exit on failure)
-            sys.exit(f"✖  Unexpected: Could not place WG “{failed}”.")
+            # Place Working Groups
+            grid_wg, failed, empty_rows = greedy_place_wgroups(wgroups,
+                                                               args.max_tries,
+                                                               args.verbose)
+            if failed:
+                # (This sys.exit is redundant since greedy_place_wgroups() already sys.exit on failure)
+                sys.exit(f"✖  Unexpected: Could not place WG “{failed}”.")
 
-        if args.verbose and empty_rows:
-            print("⚠  After placing WGs, these block(s) are still empty:",
-                  ", ".join(f"Block {r+1}" for r in empty_rows))
+            if args.verbose and empty_rows:
+                print("⚠  After placing WGs, these block(s) are still empty:",
+                      ", ".join(f"Block {r+1}" for r in empty_rows))
 
-        # Fill BOFs into any remaining empty cells
-        new_grid, leftovers = fill_bofs(grid_wg, bofs, args.verbose)
-        if leftovers:
-            sys.exit(f"✖  {len(leftovers)} BOF(s) could not be placed (no empty slots). "
-                     f"Example leftover: “{leftovers[0]}”.")
-        empty_after = [i for i, row in enumerate(new_grid) if not any(row)]
-        if empty_after:
-            print("⚠  Warning: After placing BOFs, these block(s) remain empty:",
-                  ", ".join(f"Block {r+1}" for r in empty_after))
+            # Fill BOFs into any remaining empty cells
+            new_grid, leftovers = fill_bofs(grid_wg, bofs, args.verbose)
+            if leftovers:
+                sys.exit(f"✖  {len(leftovers)} BOF(s) could not be placed (no empty slots). "
+                         f"Example leftover: “{leftovers[0]}”.")
+            empty_after = [i for i, row in enumerate(new_grid) if not any(row)]
+            if empty_after and args.verbose:
+                print("⚠  Warning: After placing BOFs, these block(s) remain empty:",
+                      ", ".join(f"Block {r+1}" for r in empty_after))
 
-        # Stats
-        filled = sum(1 for row in new_grid for cell in row if cell)
-        empty_slots = CAPACITY - filled
-        tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
-        print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
-        print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
-        write_schedule(new_grid, out_path)
-        print(f"✓  Final schedule (WG + BOF) written to {out_path!r}.")
+            # Stats
+            filled = sum(1 for row in new_grid for cell in row if cell)
+            empty_slots = CAPACITY - filled
+            tries = getattr(greedy_place_wgroups, 'last_attempts', None) or 1
+            if args.permutations > 1:
+                print(f"ℹ  Schedule {perm}/{args.permutations}: WG requests={len(wgroups)}, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
+                print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
+            else:
+                print(f"ℹ  Stats: WG requests={len(wgroups)}, BOF requests={len(bofs)}, slots filled={filled}/{CAPACITY}, empty slots={empty_slots}")
+                print(f"ℹ  Evaluated {tries} possible schedule{'s' if tries != 1 else ''}")
+            write_schedule(new_grid, out_path)
+            if args.permutations > 1:
+                print(f"✓  Final schedule {perm} (WG + BOF) written to {out_path!r}.")
+            else:
+                print(f"✓  Final schedule (WG + BOF) written to {out_path!r}.")
         sys.exit(0)
 
     # If no valid combination of arguments, print help
