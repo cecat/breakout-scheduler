@@ -64,8 +64,8 @@ def load_config(config_path="config.yaml"):
     """
     Load simple YAML-like configuration with column indices (0-based).
     Supports keys:
-      wg: { name_column: int, length_column: int }
-      bof: { name_column: int }
+      wg: { name_column: int, length_column: int, max_length: int }
+      bof: { name_column: int, length_column: int, max_length: int }
     """
     if not os.path.isfile(config_path):
         sys.exit(f"✖  Config file not found: {config_path!r}")
@@ -97,16 +97,20 @@ def load_config(config_path="config.yaml"):
     # Validate required keys
     if 'name_column' not in cfg['wg'] or 'length_column' not in cfg['wg']:
         sys.exit("✖  Config 'wg' section must have 'name_column' and 'length_column'.")
+    if 'max_length' not in cfg['wg']:
+        sys.exit("✖  Config 'wg' section must have 'max_length'.")
     if 'name_column' not in cfg['bof'] or 'length_column' not in cfg['bof']:
         sys.exit("✖  Config 'bof' section must have 'name_column' and 'length_column'.")
+    if 'max_length' not in cfg['bof']:
+        sys.exit("✖  Config 'bof' section must have 'max_length'.")
 
     return cfg
 
 # ──────────────────────── I/O Helpers ────────────────────────
-def read_wgroups(path, name_col, length_col):
+def read_wgroups(path, name_col, length_col, max_length):
     """
     Read “Working Groups” CSV using column indices.
-    Each length must be in {1,2,3}.
+    Length is capped at max_length.
     Returns:  [ (name:str, length:int), … ]
     """
     wgs = []
@@ -131,17 +135,18 @@ def read_wgroups(path, name_col, length_col):
             if length < 1:
                 print(f"⚠  WG “{name}” requested {length} slots, defaulting to 1.")
                 length = 1
-            if length > 5:
-                print(f"⚠  WG “{name}” requested {length} slots, capping at 5.")
-                length = 5
+            if length > max_length:
+                print(f"⚠  WG “{name}” requested {length} slots, capping at {max_length}.")
+                length = max_length
             wgs.append((name, length))
     return wgs
 
 
-def read_bofs(path, name_col, length_col):
+def read_bofs(path, name_col, length_col, max_length):
     """
     Read "BOFs" CSV using the configured name and length column indices.
     For each row, take the first line of the target cell as the BOF name.
+    Length is capped at max_length.
     Returns: [ (bof_name:str, length:int), … ]
     """
     bofs = []
@@ -169,9 +174,9 @@ def read_bofs(path, name_col, length_col):
             if length < 1:
                 print(f"⚠  BOF '{name}' requested {length} slots, defaulting to 1.")
                 length = 1
-            if length > 2:
-                print(f"⚠  BOF '{name}' requested {length} slots, capping at 2.")
-                length = 2
+            if length > max_length:
+                print(f"⚠  BOF '{name}' requested {length} slots, capping at {max_length}.")
+                length = max_length
             bofs.append((name, length))
     return bofs
 
@@ -360,7 +365,7 @@ if __name__ == "__main__":
     if has_w:
         if not os.path.isfile(args.wgroups):
             sys.exit(f"✖  WG file not found: {args.wgroups!r}")
-        wgroups = read_wgroups(args.wgroups, cfg['wg']['name_column'], cfg['wg']['length_column'])
+        wgroups = read_wgroups(args.wgroups, cfg['wg']['name_column'], cfg['wg']['length_column'], cfg['wg']['max_length'])
         if args.verbose:
             print(f"→ Loaded {len(wgroups)} Working Groups.")
 
@@ -369,7 +374,7 @@ if __name__ == "__main__":
     if has_b:
         if not os.path.isfile(args.bofs):
             sys.exit(f"✖  BOFs file not found: {args.bofs!r}")
-        bofs = read_bofs(args.bofs, cfg['bof']['name_column'], cfg['bof']['length_column'])
+        bofs = read_bofs(args.bofs, cfg['bof']['name_column'], cfg['bof']['length_column'], cfg['bof']['max_length'])
         if args.verbose:
             print(f"→ Loaded {len(bofs)} BOF request(s).")
 

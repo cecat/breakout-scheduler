@@ -39,7 +39,7 @@ class TestCSVReaders(unittest.TestCase):
             writer.writerow(["Test WG 1", "2"])
             writer.writerow(["Test WG 2", "1"])
         
-        wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
+        wgroups = read_wgroups(wg_path, name_col=0, length_col=1, max_length=5)
         self.assertEqual(len(wgroups), 2)
         self.assertEqual(wgroups[0], ("Test WG 1", 2))
         self.assertEqual(wgroups[1], ("Test WG 2", 1))
@@ -53,7 +53,7 @@ class TestCSVReaders(unittest.TestCase):
             writer.writerow(["Long WG", "7"])  # Exceeds limit: will be capped at 5
             writer.writerow(["Normal WG", "2"])
         
-        wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
+        wgroups = read_wgroups(wg_path, name_col=0, length_col=1, max_length=5)
         self.assertEqual(len(wgroups), 2)
         self.assertEqual(wgroups[0], ("Long WG", 5))  # Capped at 5
         self.assertEqual(wgroups[1], ("Normal WG", 2))
@@ -78,7 +78,7 @@ class TestCSVReaders(unittest.TestCase):
             row2[11] = "2"
             writer.writerow(row2)
         
-        bofs = read_bofs(bof_path, name_col=8, length_col=11)
+        bofs = read_bofs(bof_path, name_col=8, length_col=11, max_length=2)
         self.assertEqual(len(bofs), 2)
         self.assertEqual(bofs[0], ("BOF 1", 1))
         self.assertEqual(bofs[1], ("BOF 2", 2))
@@ -229,8 +229,8 @@ class TestEndToEnd(unittest.TestCase):
             writer.writerow(row1)
         
         # Run scheduling
-        wgroups = read_wgroups(wg_path, name_col=0, length_col=1)
-        bofs = read_bofs(bof_path, name_col=8, length_col=11)
+        wgroups = read_wgroups(wg_path, name_col=0, length_col=1, max_length=5)
+        bofs = read_bofs(bof_path, name_col=8, length_col=11, max_length=2)
         
         grid, failed, empty_rows = greedy_place_wgroups(wgroups, max_tries=100)
         self.assertIsNone(failed)
