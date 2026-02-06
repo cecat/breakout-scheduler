@@ -66,18 +66,25 @@ The test suite includes:
 The scheduler uses `config.yaml` to specify which columns to read from your CSV files. All column indices are 0-based (first column = 0).
 
 ```yaml
+# Grid dimensions
+grid:
+  num_sessions: 5     # Number of time sessions/blocks (rows)
+  num_rooms: 8        # Number of parallel rooms (columns)
+
 # Working Groups CSV configuration
 wg:
   name_column: 8      # Column with group name
   length_column: 10   # Column with session count
-  max_length: 5       # Maximum sessions (requests exceeding this are capped)
+  max_length: 5       # Max consecutive sessions (cannot exceed num_sessions)
 
 # Birds of a Feather CSV configuration
 bof:
   name_column: 8      # Column with BOF name
   length_column: 11   # Column with session count
-  max_length: 2       # Maximum sessions (requests exceeding this are capped)
+  max_length: 2       # Max consecutive sessions (cannot exceed num_sessions)
 ```
+
+The scheduler validates that `max_length` values don't exceed `num_sessions` to prevent configuration errors.
 
 To use a different configuration file, use the `-c/--config` option.
 

@@ -19,15 +19,19 @@ Uses a two-phase randomized placement algorithm with backtracking: WGs first, th
 CSV column mappings are specified in `config.yaml` using 0-based indices:
 
 ```yaml
+grid:
+  num_sessions: 5     # Number of time sessions (default: 5)
+  num_rooms: 8        # Number of parallel rooms (default: 8)
+
 wg:
   name_column: 8      # Working group name column
   length_column: 10   # Session count column
-  max_length: 5       # Maximum sessions allowed (default: 5)
+  max_length: 5       # Max sessions (cannot exceed num_sessions)
 
 bof:
   name_column: 8      # BOF name column
   length_column: 11   # Session count column
-  max_length: 2       # Maximum sessions allowed (default: 2)
+  max_length: 2       # Max sessions (cannot exceed num_sessions)
 ```
 
 Use `-c/--config` to specify an alternate configuration file.

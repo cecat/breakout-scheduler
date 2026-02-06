@@ -64,6 +64,7 @@ def load_config(config_path="config.yaml"):
     """
     Load simple YAML-like configuration with column indices (0-based).
     Supports keys:
+      grid: { num_sessions: int, num_rooms: int }
       wg: { name_column: int, length_column: int, max_length: int }
       bof: { name_column: int, length_column: int, max_length: int }
     """
@@ -71,7 +72,7 @@ def load_config(config_path="config.yaml"):
         sys.exit(f"✖  Config file not found: {config_path!r}")
 
     # Minimal parser for our simple YAML structure (no external dependencies)
-    cfg = {"wg": {}, "bof": {}}
+    cfg = {"grid": {}, "wg": {}, "bof": {}}
     section = None
     with open(config_path, "r", encoding="utf-8") as f:
         for raw in f:
@@ -79,10 +80,10 @@ def load_config(config_path="config.yaml"):
             line = raw.split('#', 1)[0].rstrip()
             if not line:
                 continue
-            # Section headers (e.g., wg:, bof:)
+            # Section headers (e.g., grid:, wg:, bof:)
             if not line.startswith(' ') and line.endswith(':'):
                 key = line[:-1].strip()
-                section = key if key in ("wg", "bof") else None
+                section = key if key in ("grid", "wg", "bof") else None
                 continue
             # Key: value within a section (2-space indent)
             if section and line.startswith('  ') and ':' in line:
@@ -95,6 +96,8 @@ def load_config(config_path="config.yaml"):
                     sys.exit(f"✖  Config value for {section}.{k} must be an integer (got {v!r}).")
 
     # Validate required keys
+    if 'num_sessions' not in cfg['grid'] or 'num_rooms' not in cfg['grid']:
+        sys.exit("✖  Config 'grid' section must have 'num_sessions' and 'num_rooms'.")
     if 'name_column' not in cfg['wg'] or 'length_column' not in cfg['wg']:
         sys.exit("✖  Config 'wg' section must have 'name_column' and 'length_column'.")
     if 'max_length' not in cfg['wg']:
@@ -103,6 +106,13 @@ def load_config(config_path="config.yaml"):
         sys.exit("✖  Config 'bof' section must have 'name_column' and 'length_column'.")
     if 'max_length' not in cfg['bof']:
         sys.exit("✖  Config 'bof' section must have 'max_length'.")
+
+    # Validate that max_length values don't exceed num_sessions
+    num_sessions = cfg['grid']['num_sessions']
+    if cfg['wg']['max_length'] > num_sessions:
+        sys.exit(f"✖  Config error: wg.max_length ({cfg['wg']['max_length']}) cannot exceed grid.num_sessions ({num_sessions}).")
+    if cfg['bof']['max_length'] > num_sessions:
+        sys.exit(f"✖  Config error: bof.max_length ({cfg['bof']['max_length']}) cannot exceed grid.num_sessions ({num_sessions}).")
 
     return cfg
 
@@ -330,17 +340,13 @@ if __name__ == "__main__":
                         help=f"Max random attempts for placing WGs (default {DEFAULT_MAX_TRIES})")
     parser.add_argument("-c", "--config", default="config.yaml",
                         help="Path to configuration YAML with column indices (default: config.yaml)")
-    parser.add_argument("-r", "--rooms", type=int, default=NUM_ROOMS,
-                        help=f"Number of rooms (default {NUM_ROOMS})")
+    parser.add_argument("-r", "--rooms", type=int, default=8,
+                        help="Number of rooms (default: from config.yaml, or 8 if not specified)")
     parser.add_argument("-p", "--permutations", type=int, default=1,
                         help="Generate multiple valid schedules (default 1)")
     parser.add_argument("--verbose", action="store_true",
                         help="Show diagnostic info (attempt counts, empty rows, etc.)")
     args = parser.parse_args()
-    
-    # Update NUM_ROOMS based on command line argument
-    NUM_ROOMS = args.rooms
-    CAPACITY = NUM_BLOCKS * NUM_ROOMS
     
     # Validate permutations
     if args.permutations < 1:
@@ -350,10 +356,13 @@ if __name__ == "__main__":
     has_b = bool(args.bofs)
     has_s = bool(args.schedule)
 
-    # Load configuration (only if needed)
-    cfg = None
-    if has_w or has_b:
-        cfg = load_config(args.config)
+    # Load configuration
+    cfg = load_config(args.config)
+    
+    # Use grid dimensions from config, but allow -r to override num_rooms
+    NUM_BLOCKS = cfg['grid']['num_sessions']
+    NUM_ROOMS = args.rooms if args.rooms != 8 else cfg['grid']['num_rooms']  # Override if -r specified
+    CAPACITY = NUM_BLOCKS * NUM_ROOMS
 
     # “Only -b” is not allowed
     if has_b and not (has_s or has_w):

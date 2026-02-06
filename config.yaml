@@ -1,14 +1,19 @@
 # Configuration for breakout-scheduler CSV column mappings
 # All indices are 0-based (first column = 0)
 
+# Grid dimensions (conference schedule structure)
+grid:
+  num_sessions:   5   # Number of time sessions/blocks (rows in output)
+  num_rooms:      8   # Number of parallel rooms (columns in output)
+
 # Working Groups CSV configuration
 wg:
   name_column:    8   # Column containing group name (default: "Name of Group")
   length_column: 10   # Column containing session length (default: "Quantity of Sessions Needed")
-  max_length:     5   # Maximum number of sessions allowed (requests exceeding this are capped)
+  max_length:     5   # Maximum consecutive sessions allowed (cannot exceed num_sessions)
 
 # Birds of a Feather CSV configuration  
 bof:
   name_column:    8   # Column containing BOF name (default: column AG, 33rd column)
   length_column: 11   # Column containing number of requested sessions
-  max_length:     2   # Maximum number of sessions allowed (requests exceeding this are capped)
+  max_length:     2   # Maximum consecutive sessions allowed (cannot exceed num_sessions)
