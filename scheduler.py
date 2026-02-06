@@ -447,6 +447,9 @@ if __name__ == "__main__":
             print(f"   See README.md 'Handling Over-Subscription' for details.")
             print(f"")
             print(f"   No schedule files written.")
+            sys.stdout.flush()
+            sys.stderr.flush()
+
             sys.exit(0)
 
     # 1) Only WGs  → schedule WGs → write & exit
