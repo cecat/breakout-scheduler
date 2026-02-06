@@ -152,3 +152,38 @@ python generate_test_data.py
 # Custom counts and output paths
 python generate_test_data.py --num-wgs 7 --num-bofs 6 --wg-output my_wg.csv --bof-output my_bof.csv
 ```
+
+## Scheduling Algorithm
+
+The scheduler implements a **Randomized First-Fit Decreasing (FFD) with Backtracking** algorithm for the bin packing problem:
+
+### Problem Formulation
+
+- **Items**: Working groups and BOFs (each requiring 1-5 consecutive time slots)
+- **Bins**: Room columns (each with capacity = `num_sessions`)
+- **Constraint**: Items must occupy consecutive slots within a single room
+- **Objective**: Fit all items into available rooms
+
+### Algorithm Steps
+
+1. **Randomization**: Shuffle item order for diversity across multiple runs
+2. **Decreasing Sort**: Process largest items first (reduces fragmentation)
+3. **First-Fit Placement**: 
+   - Try time sessions sequentially (1, 2, 3...)
+   - Randomize room order within each session
+   - Place in first available position
+4. **Backtracking**: If any item fails to place, restart entire attempt
+5. **Retry**: Repeat up to `max_tries` attempts
+
+### Problem Class
+
+This is a variant of **2D Bin Packing with Contiguity Constraints** (also known as Strip Packing), which is NP-hard. The randomized approach provides:
+- Good solutions in practice
+- Diverse alternatives (useful for avoiding schedule conflicts)
+- Reasonable runtime for typical conference sizes
+
+### References
+
+- Coffman, E.G., Garey, M.R., and Johnson, D.S. (1996). "Approximation algorithms for bin packing: a survey." In *Approximation Algorithms for NP-Hard Problems*, PWS Publishing.
+- Johnson, D.S. (1973). "Near-optimal bin packing algorithms." *Doctoral Thesis*, MIT.
+- Lodi, A., Martello, S., and Vigo, D. (2002). "Recent advances on two-dimensional bin packing problems." *Discrete Applied Mathematics* 123(1-3):379-396.
