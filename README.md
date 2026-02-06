@@ -14,12 +14,13 @@ The system schedules:
 
 The scheduler defaults to a 5×8 grid (5 time blocks × 8 rooms) with a
 two-phase approach:
-1. First, place Working Groups using randomized placement with backtracking
+1. First, place Working Groups using randomized placement with backtracking.
 2. Then, fill remaining empty slots with BOFs (which are typically single slots).
 
 Multiple permutations can be generated (see **Command Line Options**), providing alternatives
 for cases where certain groups do not want to be scheduled in the same sessions.  The
-random placement algorithm minimizes (but does not eliminate) duplication.
+random placement algorithm with multiple permutations will hopefully yield schedule options
+that avoid undesired collisions, but does not eliminate the possibility.
 
 
 ## Requirements
@@ -29,11 +30,30 @@ random placement algorithm minimizes (but does not eliminate) duplication.
 
 ## Setup
 
-No installation required. Simply clone the repository and run:
+
+1. Clone the repository.
+
+```bash
+git clone git@github.com:cecat/breakout-scheduler.git
+cd breakout-scheduler
+```
+
+2. Import the CSV files for WG and BOF requests.  The settings in config.yaml for column assignments (name, number of slots) should match these.
+
+3. Run the scheduler.
 
 ```bash
 python scheduler.py --help
 ```
+
+4. If helpful, run the schedule summary script for an index of groups and slots.
+
+```bash
+python schedule_summary.py
+```
+
+5. In cases of over-subscription, ```scheduler.py``` will flag this and a strategy for squeezing, described below in **Handling Over-Subscription**.
+
 
 ## Key Files
 
