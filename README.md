@@ -46,7 +46,7 @@ cd breakout-scheduler
 python scheduler.py --help
 ```
 
-4. If helpful, run the schedule summary script for an index of groups and slots.
+4. Run the schedule summary script for an index of groups and slots.
 
 ```bash
 python schedule_summary.py
