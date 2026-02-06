@@ -231,17 +231,13 @@ If the total requested slots exceed capacity (num_sessions × num_rooms), the sc
 
 2. **Reduce BOF max_length**: Edit `config.yaml` and decrement `bof.max_length` (e.g., `2` → `1`). Re-run scheduler. If still over-subscribed, proceed to step 3.
 
-3. **Reduce WG max_length to 3**: Edit `config.yaml` and set `wg.max_length: 3`. Re-run scheduler.
+3. **Decrement WG max_length**: Edit `config.yaml` and decrement `wg.max_length`. Re-run scheduler.
 
 **Important**: Reducing `wg.max_length` below 3 should be carefully considered, as it involves a trade-off between allowing existing working groups to make progress versus introducing new groups. If further reduction is needed, the program committee should evaluate whether to:
-- Reduce WG allocations further (limiting established group progress), OR
-- Reduce BOFs to only those with the most promise and likely success at creating momentum
+- Reduce WG allocations for specific WGs (limiting established group progress), or
+- Decline BOFs with the lowest promise and likely success at creating momentum.
 
-**Note**: If a reduction step doesn't change the total (e.g., no groups requested that many slots), simply continue to the next step.
-
-**If nothing fits even at minimums**:
-- Increase `grid.num_rooms` or `grid.num_sessions` in config.yaml, OR
-- Reduce the number of groups in your input CSV files
+If these are not feasible, it is worth discussing with the logistics team whether more space could be opened up, or suggesting that BOFs share a slot (e.g., somewhat related BOFs each taking 45 minutes of a slot).
 
 ## Scheduling Algorithm
 
