@@ -220,7 +220,7 @@ If the total requested slots exceed capacity (num_sessions × num_rooms), the sc
 
 **Strategy**: Squeeze groups requesting more slots first (they have more flexibility), while protecting groups requesting fewer slots.
 
-### Manual Squeeze Process
+### Resolution Steps
 
 1. **Attempt scheduling** and check for over-subscription error:
    ```bash
@@ -229,29 +229,19 @@ If the total requested slots exceed capacity (num_sessions × num_rooms), the sc
    #    Overflow: 12 slots
    ```
 
-2. **Reduce BOF max_length first** (lower priority sessions):
-   - Edit `config.yaml`: change `bof.max_length: 2` → `1`
-   - Re-run scheduler
-   - Check results with `schedule_summary.py`
-   - Only BOFs requesting 2+ slots are affected
+2. **Reduce BOF max_length**: Edit `config.yaml` and decrement `bof.max_length` (e.g., `2` → `1`). Re-run scheduler. If still over-subscribed, proceed to step 3.
 
-3. **If still over-subscribed, reduce WG max_length** (higher priority sessions):
-   - Edit `config.yaml`: change `wg.max_length: 5` → `4`
-   - Re-run scheduler
-   - Only WGs requesting 5 slots are affected
+3. **Reduce WG max_length to 3**: Edit `config.yaml` and set `wg.max_length: 3`. Re-run scheduler.
 
-4. **Continue reducing WG max_length if needed**:
-   - `wg.max_length: 4` → `3` → `2` → `1`
-   - At each step, only the most ambitious WGs are squeezed
-   - Use `schedule_summary.py` to evaluate the impact
+**Important**: Reducing `wg.max_length` below 3 should be carefully considered, as it involves a trade-off between allowing existing working groups to make progress versus introducing new groups. If further reduction is needed, the program committee should evaluate whether to:
+- Reduce WG allocations further (limiting established group progress), OR
+- Reduce BOFs to only those with the most promise and likely success at creating momentum
 
 **Note**: If a reduction step doesn't change the total (e.g., no groups requested that many slots), simply continue to the next step.
 
-**If nothing fits even at minimums** (bof.max_length=1, wg.max_length=1):
+**If nothing fits even at minimums**:
 - Increase `grid.num_rooms` or `grid.num_sessions` in config.yaml, OR
 - Reduce the number of groups in your input CSV files
-
-**Future enhancement**: An automated `--squeeze` mode may be added to iterate through reductions automatically while reporting the impact at each step.
 
 ## Scheduling Algorithm
 
