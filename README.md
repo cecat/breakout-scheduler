@@ -38,6 +38,7 @@ python scheduler.py --help
 ## Key Files
 
 - **scheduler.py**: Main scheduling engine with two-phase algorithm (WGs + BOFs)
+- **schedule_summary.py**: Generate human-readable reports from schedule CSV files
 - **config.yaml**: Configuration file specifying CSV column indices (0-based)
 - **schedule.csv**: Output 5×8 grid with Room 1-8 headers and Block 1-5 rows
 
@@ -116,6 +117,25 @@ To use a different configuration file, use the `-c/--config` option.
 - `--max-tries N`: Maximum random placement attempts for WGs (default: 5000)
 - `--verbose`: Show diagnostic information during scheduling
 
+### schedule_summary.py
+
+Generates human-readable reports from schedule CSV files showing slot utilization and group details.
+
+**Usage**: `python schedule_summary.py <schedule.csv> [<schedule2.csv> ...]`
+
+**Output format**:
+```
+Schedule: schedule.csv
+39/40 slots filled (97.5%)
+
+Security WG: 3 slots
+Privacy WG: 2 slots
+IoT BOF: 1 slot
+...
+```
+
+Groups are listed alphabetically. When multiple schedule files are provided, reports are separated by dividers.
+
 ## Common Commands
 
 ```bash
@@ -139,6 +159,12 @@ python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -r 10
 
 # Use a custom configuration file
 python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv -c my_config.yaml
+
+# Generate a summary report of a schedule
+python schedule_summary.py schedule.csv
+
+# Generate reports for multiple schedules
+python schedule_summary.py schedule1.csv schedule2.csv schedule3.csv
 ```
 
 ## Architecture Notes
@@ -167,6 +193,45 @@ python generate_test_data.py
 # Custom counts and output paths
 python generate_test_data.py --num-wgs 7 --num-bofs 6 --wg-output my_wg.csv --bof-output my_bof.csv
 ```
+
+## Handling Over-Subscription
+
+If the total requested slots exceed capacity (num_sessions × num_rooms), the scheduler will detect this and report an error. You can resolve over-subscription by iteratively reducing the `max_length` values in `config.yaml`.
+
+**Strategy**: Squeeze groups requesting more slots first (they have more flexibility), while protecting groups requesting fewer slots.
+
+### Manual Squeeze Process
+
+1. **Attempt scheduling** and check for over-subscription error:
+   ```bash
+   python scheduler.py -w WG.csv -b BOF.csv -s schedule.csv
+   # ⚠ Over-subscription: 52 slots requested, 40 capacity
+   #    Overflow: 12 slots
+   ```
+
+2. **Reduce BOF max_length first** (lower priority sessions):
+   - Edit `config.yaml`: change `bof.max_length: 2` → `1`
+   - Re-run scheduler
+   - Check results with `schedule_summary.py`
+   - Only BOFs requesting 2+ slots are affected
+
+3. **If still over-subscribed, reduce WG max_length** (higher priority sessions):
+   - Edit `config.yaml`: change `wg.max_length: 5` → `4`
+   - Re-run scheduler
+   - Only WGs requesting 5 slots are affected
+
+4. **Continue reducing WG max_length if needed**:
+   - `wg.max_length: 4` → `3` → `2` → `1`
+   - At each step, only the most ambitious WGs are squeezed
+   - Use `schedule_summary.py` to evaluate the impact
+
+**Note**: If a reduction step doesn't change the total (e.g., no groups requested that many slots), simply continue to the next step.
+
+**If nothing fits even at minimums** (bof.max_length=1, wg.max_length=1):
+- Increase `grid.num_rooms` or `grid.num_sessions` in config.yaml, OR
+- Reduce the number of groups in your input CSV files
+
+**Future enhancement**: An automated `--squeeze` mode may be added to iterate through reductions automatically while reporting the impact at each step.
 
 ## Scheduling Algorithm
 

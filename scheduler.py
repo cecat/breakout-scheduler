@@ -427,6 +427,24 @@ if __name__ == "__main__":
         if args.verbose:
             print(f"→ Loaded {len(bofs)} BOF request(s).")
 
+    # Pre-flight capacity check (only for WG+BOF mode)
+    if has_w and has_b:
+        total_wg_slots = sum(length for _, length in wgroups)
+        total_bof_slots = sum(length for _, length in bofs)
+        total_requested = total_wg_slots + total_bof_slots
+        if total_requested > CAPACITY:
+            overflow = total_requested - CAPACITY
+            print(f"⚠  Over-subscription detected:")
+            print(f"   Total requested: {total_requested} slots ({total_wg_slots} WG + {total_bof_slots} BOF)")
+            print(f"   Capacity: {CAPACITY} slots ({NUM_BLOCKS} sessions × {NUM_ROOMS} rooms)")
+            print(f"   Overflow: {overflow} slots")
+            print(f"")
+            print(f"   To resolve, reduce max_length values in {args.config}:")
+            print(f"   1. Reduce bof.max_length (currently {cfg['bof']['max_length']}) to squeeze BOFs first")
+            print(f"   2. If needed, reduce wg.max_length (currently {cfg['wg']['max_length']}) to squeeze WGs")
+            print(f"   See README.md 'Handling Over-Subscription' section for details.")
+            sys.exit(1)
+
     # 1) Only WGs  → schedule WGs → write & exit
     if has_w and not has_b:
         base_path = args.schedule or "schedule.csv"
