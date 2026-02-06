@@ -52,7 +52,7 @@ python scheduler.py --help
 python schedule_summary.py
 ```
 
-5. In cases of over-subscription, ```scheduler.py``` will flag this and a strategy for squeezing, described below in **Handling Over-Subscription**.
+5. In cases of over-subscription, ```scheduler.py``` will flag this and a strategy for squeezing, described in the **Handling Over-Subscription** section below.
 
 
 ## Key Files
