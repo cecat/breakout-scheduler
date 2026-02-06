@@ -65,6 +65,7 @@ def load_config(config_path="config.yaml"):
     Load simple YAML-like configuration with column indices (0-based).
     Supports keys:
       grid: { num_sessions: int, num_rooms: int }
+      algorithm: { max_tries: int, sort_strategy: str, random_seed: int|null }
       wg: { name_column: int, length_column: int, max_length: int }
       bof: { name_column: int, length_column: int, max_length: int }
     """
@@ -72,7 +73,7 @@ def load_config(config_path="config.yaml"):
         sys.exit(f"✖  Config file not found: {config_path!r}")
 
     # Minimal parser for our simple YAML structure (no external dependencies)
-    cfg = {"grid": {}, "wg": {}, "bof": {}}
+    cfg = {"grid": {}, "algorithm": {}, "wg": {}, "bof": {}}
     section = None
     with open(config_path, "r", encoding="utf-8") as f:
         for raw in f:
@@ -80,24 +81,36 @@ def load_config(config_path="config.yaml"):
             line = raw.split('#', 1)[0].rstrip()
             if not line:
                 continue
-            # Section headers (e.g., grid:, wg:, bof:)
+            # Section headers (e.g., grid:, algorithm:, wg:, bof:)
             if not line.startswith(' ') and line.endswith(':'):
                 key = line[:-1].strip()
-                section = key if key in ("grid", "wg", "bof") else None
+                section = key if key in ("grid", "algorithm", "wg", "bof") else None
                 continue
             # Key: value within a section (2-space indent)
             if section and line.startswith('  ') and ':' in line:
                 k, v = line.strip().split(':', 1)
                 k = k.strip()
                 v = v.strip().strip('"\'')
-                try:
-                    cfg[section][k] = int(v)
-                except ValueError:
-                    sys.exit(f"✖  Config value for {section}.{k} must be an integer (got {v!r}).")
+                # Handle special cases
+                if v.lower() == 'null':
+                    cfg[section][k] = None
+                elif k == 'sort_strategy':
+                    cfg[section][k] = v
+                else:
+                    try:
+                        cfg[section][k] = int(v)
+                    except ValueError:
+                        sys.exit(f"✖  Config value for {section}.{k} must be an integer (got {v!r}).")
 
     # Validate required keys
     if 'num_sessions' not in cfg['grid'] or 'num_rooms' not in cfg['grid']:
         sys.exit("✖  Config 'grid' section must have 'num_sessions' and 'num_rooms'.")
+    if 'max_tries' not in cfg['algorithm']:
+        sys.exit("✖  Config 'algorithm' section must have 'max_tries'.")
+    if 'sort_strategy' not in cfg['algorithm']:
+        sys.exit("✖  Config 'algorithm' section must have 'sort_strategy'.")
+    if 'random_seed' not in cfg['algorithm']:
+        sys.exit("✖  Config 'algorithm' section must have 'random_seed'.")
     if 'name_column' not in cfg['wg'] or 'length_column' not in cfg['wg']:
         sys.exit("✖  Config 'wg' section must have 'name_column' and 'length_column'.")
     if 'max_length' not in cfg['wg']:
@@ -107,6 +120,15 @@ def load_config(config_path="config.yaml"):
     if 'max_length' not in cfg['bof']:
         sys.exit("✖  Config 'bof' section must have 'max_length'.")
 
+    # Validate algorithm parameters
+    valid_strategies = ['largest_first', 'smallest_first', 'as_is']
+    if cfg['algorithm']['sort_strategy'] not in valid_strategies:
+        sys.exit(f"✖  Config error: algorithm.sort_strategy must be one of {valid_strategies} (got {cfg['algorithm']['sort_strategy']!r}).")
+    if cfg['algorithm']['max_tries'] < 1:
+        sys.exit(f"✖  Config error: algorithm.max_tries must be >= 1 (got {cfg['algorithm']['max_tries']}).")
+    if cfg['algorithm']['random_seed'] is not None and cfg['algorithm']['random_seed'] < 0:
+        sys.exit(f"✖  Config error: algorithm.random_seed must be >= 0 or null (got {cfg['algorithm']['random_seed']}).")
+    
     # Validate that max_length values don't exceed num_sessions
     num_sessions = cfg['grid']['num_sessions']
     if cfg['wg']['max_length'] > num_sessions:
@@ -227,8 +249,8 @@ def write_schedule(grid, path):
             w.writerow([cell or "" for cell in block_row])
 
 
-# ────────────────────── Placement Algorithms ──────────────────────
-def greedy_place_wgroups(wgroups, max_tries, verbose=False):
+# ──────────────────── Placement Algorithms ──────────────────────
+def greedy_place_wgroups(wgroups, max_tries, sort_strategy='largest_first', verbose=False):
     """
     Try up to max_tries to place all working groups (length 1–5) into an empty 5×8 grid.
     Returns (grid, failed_name or None, empty_rows_list).
@@ -242,9 +264,13 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
 
     greedy_place_wgroups.last_attempts = 0
     for attempt in range(1, max_tries + 1):
-        # Shuffle order of WGs, then sort by descending length
+        # Shuffle order of WGs, then sort according to strategy
         a_list = random.sample(wgroups, len(wgroups))
-        a_list.sort(key=lambda x: -x[1])
+        if sort_strategy == 'largest_first':
+            a_list.sort(key=lambda x: -x[1])  # Descending
+        elif sort_strategy == 'smallest_first':
+            a_list.sort(key=lambda x: x[1])   # Ascending
+        # else: 'as_is' - no sorting, keep shuffled order
 
         # Initialize empty grid
         grid = [[None] * NUM_ROOMS for _ in range(NUM_BLOCKS)]
@@ -286,7 +312,7 @@ def greedy_place_wgroups(wgroups, max_tries, verbose=False):
     sys.exit(f"✖  Could not place WG “{failed_name}” after {max_tries} attempts.")
 
 
-def fill_bofs(grid, bofs, verbose=False):
+def fill_bofs(grid, bofs, sort_strategy='largest_first', verbose=False):
     """
     Given a partially filled grid and a list of BOFs [(name, length), …],
     attempt to place each BOF (which can now be 1-3 sessions) using same
@@ -298,9 +324,13 @@ def fill_bofs(grid, bofs, verbose=False):
     new_grid = [row[:] for row in grid]
     leftovers = []
     
-    # Shuffle BOFs and sort by descending length (same strategy as WGs)
+    # Shuffle BOFs and sort according to strategy (same as WGs)
     bof_list = random.sample(bofs, len(bofs))
-    bof_list.sort(key=lambda x: -x[1])
+    if sort_strategy == 'largest_first':
+        bof_list.sort(key=lambda x: -x[1])  # Descending
+    elif sort_strategy == 'smallest_first':
+        bof_list.sort(key=lambda x: x[1])   # Ascending
+    # else: 'as_is' - no sorting, keep shuffled order
     
     for (name, length) in bof_list:
         # Build all candidate (start_block, room) pairs
@@ -359,10 +389,20 @@ if __name__ == "__main__":
     # Load configuration
     cfg = load_config(args.config)
     
+    # Set random seed if specified (for reproducibility)
+    if cfg['algorithm']['random_seed'] is not None:
+        random.seed(cfg['algorithm']['random_seed'])
+        if args.verbose:
+            print(f"→ Using random seed: {cfg['algorithm']['random_seed']}")
+    
     # Use grid dimensions from config, but allow -r to override num_rooms
     NUM_BLOCKS = cfg['grid']['num_sessions']
     NUM_ROOMS = args.rooms if args.rooms != 8 else cfg['grid']['num_rooms']  # Override if -r specified
     CAPACITY = NUM_BLOCKS * NUM_ROOMS
+    
+    # Get algorithm parameters (allow --max-tries to override config)
+    max_tries = args.max_tries if args.max_tries != DEFAULT_MAX_TRIES else cfg['algorithm']['max_tries']
+    sort_strategy = cfg['algorithm']['sort_strategy']
 
     # “Only -b” is not allowed
     if has_b and not (has_s or has_w):
@@ -404,7 +444,8 @@ if __name__ == "__main__":
                 out_path = base_path
             
             grid, failed, empty_rows = greedy_place_wgroups(wgroups,
-                                                            args.max_tries,
+                                                            max_tries,
+                                                            sort_strategy,
                                                             args.verbose)
             # Don't print verbose warning - will be shown inline
             # Stats
@@ -430,7 +471,7 @@ if __name__ == "__main__":
             sys.exit(f"✖  Cannot find schedule file: {sched_path!r}")
 
         base_grid = read_schedule(sched_path)
-        new_grid, leftovers = fill_bofs(base_grid, bofs, args.verbose)
+        new_grid, leftovers = fill_bofs(base_grid, bofs, sort_strategy, args.verbose)
 
         if leftovers:
             sys.exit(f"✖  {len(leftovers)} BOF(s) could not be placed (no empty slots). "
@@ -464,7 +505,8 @@ if __name__ == "__main__":
 
             # Place Working Groups
             grid_wg, failed, empty_rows = greedy_place_wgroups(wgroups,
-                                                               args.max_tries,
+                                                               max_tries,
+                                                               sort_strategy,
                                                                args.verbose)
             if failed:
                 # (This sys.exit is redundant since greedy_place_wgroups() already sys.exit on failure)
@@ -473,7 +515,7 @@ if __name__ == "__main__":
             # Don't print verbose warning - will be shown inline
 
             # Fill BOFs into any remaining empty cells
-            new_grid, leftovers = fill_bofs(grid_wg, bofs, args.verbose)
+            new_grid, leftovers = fill_bofs(grid_wg, bofs, sort_strategy, args.verbose)
             if leftovers:
                 sys.exit(f"✖  {len(leftovers)} BOF(s) could not be placed (no empty slots). "
                          f"Example leftover: “{leftovers[0]}”.")

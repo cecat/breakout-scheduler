@@ -71,6 +71,12 @@ grid:
   num_sessions: 5     # Number of time sessions/blocks (rows)
   num_rooms: 8        # Number of parallel rooms (columns)
 
+# Algorithm parameters
+algorithm:
+  max_tries: 5000              # Maximum placement attempts before failure
+  sort_strategy: largest_first # How to order items: largest_first, smallest_first, as_is
+  random_seed: null            # Integer for reproducible results, null for random
+
 # Working Groups CSV configuration
 wg:
   name_column: 8      # Column with group name
@@ -83,6 +89,15 @@ bof:
   length_column: 11   # Column with session count
   max_length: 2       # Max consecutive sessions (cannot exceed num_sessions)
 ```
+
+### Algorithm Parameters
+
+- **max_tries**: Controls how many randomized placement attempts to try before giving up (higher = more likely to find solution, but slower)
+- **sort_strategy**: 
+  - `largest_first` (default): Process largest items first, reduces fragmentation
+  - `smallest_first`: Process smallest items first, may help with tight constraints
+  - `as_is`: No sorting, use random shuffle order only
+- **random_seed**: Set to an integer (e.g., 42) for reproducible schedules, or `null` for different results each run
 
 The scheduler validates that `max_length` values don't exceed `num_sessions` to prevent configuration errors.
 

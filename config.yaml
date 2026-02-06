@@ -6,6 +6,12 @@ grid:
   num_sessions:   5   # Number of time sessions/blocks (rows in output)
   num_rooms:      8   # Number of parallel rooms (columns in output)
 
+# Algorithm parameters
+algorithm:
+  max_tries:      5000           # Maximum placement attempts before failure
+  sort_strategy:  largest_first  # How to order items: largest_first, smallest_first, as_is
+  random_seed:    null           # Integer for reproducible results, null for random
+
 # Working Groups CSV configuration
 wg:
   name_column:    8   # Column containing group name (default: "Name of Group")
