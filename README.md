@@ -28,8 +28,9 @@ that avoid undesired collisions, but does not eliminate the possibility.
 - **Python**: 3.6 or higher
 - **Dependencies**: None (uses Python standard library only)
 
-## Setup
+## Setup 
 
+### Run in your Local Environment
 
 1. Clone the repository.
 
@@ -52,7 +53,10 @@ python scheduler.py --help
 python schedule_summary.py
 ```
 
-5. In cases of over-subscription, ```scheduler.py``` will flag this and a strategy for squeezing, described in the **Handling Over-Subscription** section below.
+### Run in Google Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
+https://colab.research.google.com/github/cecat/breakout-scheduler/blob/main/colab/TPC_Breakout_Scheduler.ipynb)
 
 
 ## Key Files
