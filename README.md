@@ -57,6 +57,8 @@ python schedule_summary.py
 
 ### Run in Google Colab
 
+If you prefer to run in a Google Colab notebook you need not clone the repo nor download the forms outputs as these are linked from the notebook. Just open the link below.
+
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](
 https://colab.research.google.com/github/cecat/breakout-scheduler/blob/main/colab/TPC_Breakout_Scheduler.ipynb)
 
