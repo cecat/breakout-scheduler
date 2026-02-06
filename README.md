@@ -184,6 +184,5 @@ This is a variant of **2D Bin Packing with Contiguity Constraints** (also known 
 
 ### References
 
-- Coffman, E.G., Garey, M.R., and Johnson, D.S. (1996). "Approximation algorithms for bin packing: a survey." In *Approximation Algorithms for NP-Hard Problems*, PWS Publishing.
-- Johnson, D.S. (1973). "Near-optimal bin packing algorithms." *Doctoral Thesis*, MIT.
-- Lodi, A., Martello, S., and Vigo, D. (2002). "Recent advances on two-dimensional bin packing problems." *Discrete Applied Mathematics* 123(1-3):379-396.
+- Coffman Jr, Edward G., Michael R. Garey, and David S. Johnson. "Approximation algorithms for bin-packing—an updated survey." In Algorithm design for computer system design, pp. 49-106. Vienna: Springer Vienna, 1984.
+- Lodi, Andrea, Silvano Martello, and Daniele Vigo. "Recent advances on two-dimensional bin packing problems." Discrete Applied Mathematics 123, no. 1-3 (2002): 379-396.
