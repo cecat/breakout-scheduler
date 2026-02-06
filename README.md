@@ -39,7 +39,9 @@ git clone git@github.com:cecat/breakout-scheduler.git
 cd breakout-scheduler
 ```
 
-2. Import the CSV files for WG and BOF requests.  The settings in config.yaml for column assignments (name, number of slots) should match these.
+2. Download the CSV files for WG and BOF requests.  The settings in config.yaml for column assignments (name, number of slots) should match the responses Google Sheets for these forms:
+* [Request Working Group slots](https://docs.google.com/forms/d/e/1FAIpQLSdlWlvs_dRbBf40Ox4uWQmXqJcde8Jp7QJjqFExPMaGGX_fGw/viewform?usp=sharing&ouid=105461452692072407871)
+* [Request BOF slot](https://docs.google.com/forms/d/e/1FAIpQLSdh_wMdsltNBm3l_GikTELOMdhOhWUZgtFTjf9Apd1LEm32xA/viewform?usp=sharing&ouid=105461452692072407871)
 
 3. Run the scheduler.
 
