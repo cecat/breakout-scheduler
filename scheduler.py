@@ -434,16 +434,20 @@ if __name__ == "__main__":
         total_requested = total_wg_slots + total_bof_slots
         if total_requested > CAPACITY:
             overflow = total_requested - CAPACITY
-            print(f"⚠  Over-subscription detected:")
+            print(f"")
+            print(f"ℹ️  Over-subscription detected:")
             print(f"   Total requested: {total_requested} slots ({total_wg_slots} WG + {total_bof_slots} BOF)")
             print(f"   Capacity: {CAPACITY} slots ({NUM_BLOCKS} sessions × {NUM_ROOMS} rooms)")
             print(f"   Overflow: {overflow} slots")
             print(f"")
-            print(f"   To resolve, reduce max_length values in {args.config}:")
-            print(f"   1. Reduce bof.max_length (currently {cfg['bof']['max_length']}) to squeeze BOFs first")
-            print(f"   2. If needed, reduce wg.max_length (currently {cfg['wg']['max_length']}) to squeeze WGs")
-            print(f"   See README.md 'Handling Over-Subscription' section for details.")
-            sys.exit(1)
+            print(f"   To resolve, edit {args.config}:")
+            print(f"   1. Reduce bof.max_length (currently {cfg['bof']['max_length']})")
+            print(f"   2. If still over-subscribed, reduce wg.max_length to 3 (currently {cfg['wg']['max_length']})")
+            print(f"")
+            print(f"   See README.md 'Handling Over-Subscription' for details.")
+            print(f"")
+            print(f"   No schedule files written.")
+            sys.exit(0)
 
     # 1) Only WGs  → schedule WGs → write & exit
     if has_w and not has_b:
